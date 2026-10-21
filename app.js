@@ -68,7 +68,7 @@ $("#loginForm").addEventListener("submit", e => {
   e.preventDefault();
   const email = $("#email").value.trim().toLowerCase(); const id = $("#studentId").value.trim(); const password = $("#password").value;
   if (!/^\d{10}$/.test(id)) return $("#authError").textContent = "กรุณากรอกรหัสนักศึกษาให้ครบ 10 หลัก";
-  if (!/^[^\s@]+@bumail\.th$/i.test(email)) return $("#authError").textContent = "กรุณาใช้อีเมลมหาวิทยาลัย @bumail.th";
+  if (!/^[^\s@]+@bumail\.net$/i.test(email)) return $("#authError").textContent = "กรุณาใช้อีเมลมหาวิทยาลัย @bumail.net";
   const user = getUsers().find(u => u.email.toLowerCase() === email && u.id === id);
   if (!user || user.password !== password) return $("#authError").textContent = "อีเมล รหัสนักศึกษา หรือรหัสผ่านไม่ถูกต้อง";
   if (user.status !== "active" || !user.isVerified) return $("#authError").textContent = "บัญชีนี้ยังไม่พร้อมใช้งาน";
@@ -82,7 +82,7 @@ $("#registerForm").addEventListener("submit", e => {
   const password = $("#regPassword").value; const passwordConfirm = $("#regPasswordConfirm").value; const message = $("#regMessage");
   message.classList.remove("form-success"); message.classList.add("form-error");
   if (name.length < 2) return message.textContent = "กรุณากรอกชื่อ-นามสกุลอย่างน้อย 2 ตัวอักษร";
-  if (!/^[^\s@]+@bumail\.th$/i.test(email)) return message.textContent = "กรุณาใช้อีเมลมหาวิทยาลัย @bumail.th";
+  if (!/^[^\s@]+@bumail\.net$/i.test(email)) return message.textContent = "กรุณาใช้อีเมลมหาวิทยาลัย @bumail.net";
   if (!/^\d{10}$/.test(id)) return message.textContent = "กรุณากรอกรหัสนักศึกษาให้ครบ 10 หลัก";
   if (password.length < 8) return message.textContent = "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร";
   if (password !== passwordConfirm) return message.textContent = "รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน";
