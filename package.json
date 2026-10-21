@@ -1,0 +1,1 @@
+{"name":"bu-smart-parking","private":true,"workspaces":["server","client"],"scripts":{"dev":"concurrently \"npm run dev --workspace server\" \"npm run dev --workspace client\"","seed":"npm run seed --workspace server","build":"npm run build --workspace client","start":"npm run start --workspace server"},"devDependencies":{"concurrently":"^9.1.2"}}
