@@ -11,7 +11,7 @@ const USERS_KEY = "buParkUsers";
 const SESSION_KEY = "buParkSession";
 const demoUser = {
   id: "6612345678", email: "student@bumail.net", password: "password123",
-  name: "ธนกร ใจดี", status: "active", isVerified: true, createdAt: "2026-10-21T00:00:00.000Z"
+  name: "ก้องภพ", status: "active", isVerified: true, createdAt: "2026-10-21T00:00:00.000Z"
 };
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
