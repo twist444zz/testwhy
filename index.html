@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0b0d" />
+    <title>MotoBike Parking at BU</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2' y='2' width='60' height='60' rx='14' fill='%2315181c' stroke='%239aa4b2' stroke-width='3'/%3E%3Ctext x='32' y='27' font-family='Arial' font-weight='800' font-size='19' fill='%23e8ecf2' text-anchor='middle'%3EBU%3C/text%3E%3Cg fill='none' stroke='%23d3d9e2' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='46' r='7'/%3E%3Ccircle cx='46' cy='46' r='7'/%3E%3Cpath d='M18 46l8-10h10l10 10M26 36l4-4h8l2 4M43 33l-2-4h6'/%3E%3C/g%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- โลโก้ MotoBike Parking at BU: ตัวอักษร BU + รถมอเตอร์ไซค์ในกรอบสี่เหลี่ยมมุมมน -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <symbol id="bu-moto-logo" viewBox="0 0 64 64">
+        <defs><linearGradient id="logoMetal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f9"/><stop offset="1" stop-color="#8d97a5"/></linearGradient></defs>
+        <rect x="2" y="2" width="60" height="60" rx="14" fill="#15181c" stroke="url(#logoMetal)" stroke-width="2.5"/>
+        <text x="32" y="27" font-family="Outfit,Arial,sans-serif" font-weight="800" font-size="19" letter-spacing="1" fill="url(#logoMetal)" text-anchor="middle">BU</text>
+        <g fill="none" stroke="url(#logoMetal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="46" r="7"/><circle cx="46" cy="46" r="7"/>
+          <path d="M18 46l8-10h10l10 10"/><path d="M26 36l4-4h8l2 4"/><path d="M43 33l-2-4h6"/>
+        </g>
+      </symbol>
+    </svg>
+
+    <main id="authView" class="auth-layout">
+      <section class="auth-brand">
+        <svg class="brand-logo lg" role="img" aria-label="MotoBike Parking at BU"><use href="#bu-moto-logo"/></svg>
+        <div class="brand-copy"><span class="eyebrow">MOTOBIKE PARKING AT BU</span><h1>Park your ride,<br /><em>the smart way.</em></h1><p>ตรวจสอบที่จอดรถมอเตอร์ไซค์ในมหาวิทยาลัยกรุงเทพแบบเรียลไทม์ จองล่วงหน้า และสะสมคะแนนทุกครั้งที่ใช้งาน</p></div>
+        <div class="auth-orbit orbit-one"></div><div class="auth-orbit orbit-two"></div>
+        <div class="live-status"><i></i><span>สถานะลานจอดอัปเดตทุก 10 วินาที</span></div>
+      </section>
+      <section class="auth-panel">
+        <form id="loginForm" class="login-card" novalidate>
+          <div class="mobile-brand"><svg class="brand-logo sm" aria-hidden="true"><use href="#bu-moto-logo"/></svg><strong>MOTOBIKE PARKING AT BU</strong></div>
+          <span class="eyebrow">WELCOME BACK</span><h2>เข้าสู่ระบบ</h2><p class="muted">ใช้อีเมล @bumail.net ของคุณเพื่อเริ่มใช้งาน</p>
+          <label>อีเมล @bumail.net<input id="email" type="email" placeholder="student@bumail.net" autocomplete="email" required /></label>
+          <label>รหัสนักศึกษา<input id="studentId" inputmode="numeric" maxlength="10" placeholder="10 หลัก" required /></label>
+          <label>รหัสผ่าน<input id="password" type="password" minlength="8" placeholder="อย่างน้อย 8 ตัวอักษร" autocomplete="current-password" required /></label>
+          <div class="form-row"><label class="check"><input id="remember" type="checkbox" checked /><span></span>จดจำการเข้าสู่ระบบ</label><a href="#" id="forgotLink">ลืมรหัสผ่าน?</a></div>
+          <button class="primary-btn" type="submit">เข้าสู่ระบบ <b>→</b></button>
+          <p class="form-note">ยังไม่มีบัญชี? <button id="showRegister" type="button" class="link-button">ลงทะเบียนด้วยอีเมล @bumail.net</button></p>
+          <p id="authError" class="form-error" role="alert"></p>
+        </form>
+        <form id="registerForm" class="login-card hidden" novalidate>
+          <button class="back-btn" id="showLogin" type="button">← กลับไปหน้าเข้าสู่ระบบ</button><span class="eyebrow">NEW MEMBER</span><h2>สร้างบัญชี</h2><p class="muted">สมัครเสร็จ เข้าใช้งานได้ทันที ไม่ต้องรออีเมลยืนยัน</p>
+          <label>ชื่อ-นามสกุล<input id="regName" placeholder="เช่น ธนกร ใจดี" required /></label>
+          <label>อีเมล @bumail.net<input id="regEmail" type="email" placeholder="student@bumail.net" required /></label>
+          <label>รหัสนักศึกษา<input id="regId" inputmode="numeric" maxlength="10" placeholder="10 หลัก" required /></label>
+          <label>ทะเบียนมอเตอร์ไซค์ (ไม่บังคับ)<input id="regPlate" maxlength="20" placeholder="เช่น 1กข 1234 กรุงเทพฯ" /></label>
+          <label>รหัสผ่าน<input id="regPassword" type="password" minlength="8" placeholder="อย่างน้อย 8 ตัวอักษร" autocomplete="new-password" required /></label>
+          <label>ยืนยันรหัสผ่าน<input id="regPasswordConfirm" type="password" minlength="8" placeholder="กรอกรหัสผ่านอีกครั้ง" autocomplete="new-password" required /></label>
+          <button class="primary-btn" type="submit">สมัครสมาชิกและเข้าสู่ระบบ <b>→</b></button><p id="regMessage" class="form-success" role="alert"></p>
+        </form>
+      </section>
+    </main>
+
+    <div id="appView" class="app-shell hidden">
+      <aside class="sidebar">
+        <div class="sidebar-brand"><svg class="brand-logo sm" aria-hidden="true"><use href="#bu-moto-logo"/></svg><span>MOTOBIKE <b>PARKING</b><small>AT BANGKOK UNIVERSITY</small></span></div>
+        <nav>
+          <button class="nav-item active" data-page="dashboard"><span>▦</span>ภาพรวม</button>
+          <button class="nav-item" data-page="map"><span>⌖</span>แผนผังลานจอด</button>
+          <button class="nav-item" data-page="reservation"><span>▣</span>การจองของฉัน <i class="nav-badge hidden" id="resBadge">1</i></button>
+          <button class="nav-item" data-page="rewards"><span>★</span>เช็คอิน &amp; คะแนน</button>
+          <button class="nav-item" data-page="history"><span>◷</span>ประวัติการจอด</button>
+          <button class="nav-item" data-page="guide"><span>?</span>แนะนำการใช้งาน</button>
+        </nav>
+        <div class="sidebar-bottom"><button class="nav-item" data-page="report"><span>⚐</span>รายงานสถานะ <i class="reward">+5</i></button><button class="nav-item" data-page="profile"><span>◉</span>โปรไฟล์</button><button class="nav-item logout" id="logout"><span>↪</span>ออกจากระบบ</button></div>
+      </aside>
+      <section class="content">
+        <header class="topbar"><button id="menuToggle" class="menu-toggle" aria-label="เมนู">☰</button><div class="bread"><span class="eyebrow" id="pageKicker">WELCOME</span><h1 id="pageTitle">ภาพรวมที่จอดรถ</h1></div><div class="top-actions"><button id="notificationButton" class="icon-btn" aria-label="การแจ้งเตือน">♧<i id="notifDot" class="hidden"></i></button><div class="profile-chip"><div class="avatar">M</div><div><strong>ผู้ใช้</strong><small id="chipPoints">0 คะแนน</small></div><span>⌄</span></div></div></header>
+        <div id="notificationPop" class="notification-pop hidden"><div class="pop-title">การแจ้งเตือน <button id="clearNotifications">ล้างทั้งหมด</button></div><div id="notifList"></div></div>
+
+        <div id="dashboard" class="page active-page">
+          <section class="hero"><div><span class="eyebrow">LIVE MOTORBIKE PARKING <i class="live-dot"></i></span><h2>หาที่จอดมอเตอร์ไซค์ <em>ก่อนออกจากบ้าน</em></h2><p>ตรวจสอบช่องว่างทุกโซนและจองล่วงหน้าในไม่กี่วินาที</p><button class="primary-btn reserve-cta" data-page-go="map">ดูแผนผังลานจอด <b>→</b></button></div><div class="hero-gauge"><svg viewBox="0 0 180 100"><path class="gauge-bg" d="M 18 88 A 72 72 0 0 1 162 88"/><path id="gaugeValue" class="gauge-value" d="M 18 88 A 72 72 0 0 1 162 88"/></svg><div><strong id="availableLarge">0</strong><span>ที่ว่างตอนนี้</span></div></div></section>
+          <section class="stats-grid"><article class="stat-card"><div class="stat-icon blue">P</div><div><span>ช่องจอดว่างทั้งหมด</span><strong id="availableCount">0</strong><small class="up"><em id="updatedAtSmall">กำลังโหลด</em></small></div></article><article class="stat-card"><div class="stat-icon slate">▦</div><div><span>ช่องจอดทั้งหมด</span><strong id="totalCount">0</strong><small><em id="zoneCountText">4 โซนจอดรถ</em></small></div></article><article class="stat-card"><div class="stat-icon amber">◷</div><div><span>อัตราการใช้งานลาน</span><strong id="usageRate">0%</strong><small><em>จากช่องทั้งหมด</em></small></div></article><article class="score-card"><div><span>PARKING SCORE</span><strong id="scoreNumber">90</strong><small>/ 100 คะแนน</small></div><div class="score-ring" id="scoreRing"><span id="scoreText">ดีมาก</span></div></article></section>
+          <section class="two-column"><article class="glass-card zones-card"><div class="card-heading"><div><span class="eyebrow">MOTORBIKE ZONES</span><h3>สถานะลานจอดมอเตอร์ไซค์</h3></div><button class="text-btn" data-page-go="map">ดูแผนผังทั้งหมด →</button></div><div id="zoneList" class="zone-list"></div></article><article class="glass-card reservation-card"><div class="card-heading"><div><span class="eyebrow">YOUR RESERVATION</span><h3>การจองของคุณ</h3></div><span class="countdown hidden" id="countdown">--:--</span></div><div id="resTicket" class="reservation-ticket hidden"><div class="ticket-top"><span>ZONE</span><b id="resZone">-</b><span>SPACE</span><b id="resSpace">-</b></div><div class="ticket-line"></div><div class="ticket-bottom"><div><small>จองเมื่อ</small><strong id="resStart">-</strong></div><div><small>ถือสิทธิ์</small><strong id="resWindow">-</strong></div><button id="navigateBtn" class="nav-btn">⌖ นำทาง</button></div></div><p id="resEmpty" class="muted" style="margin-top:20px">ยังไม่มีการจอง เลือกโซนที่ว่างจากแผนผังเพื่อจองช่องจอด หรือเช็คอินที่ลานได้เลย</p><button class="cancel-btn hidden" id="cancelReservation">ยกเลิกการจอง</button></article></section>
+        </div>
+
+        <div id="map" class="page"><section class="page-heading"><div><span class="eyebrow">RANGSIT CAMPUS · LIVE MAP</span><h2>แผนผังลานจอดมอเตอร์ไซค์</h2><p>สถานะอัปเดตทุก 10 วินาที · ล่าสุด <span id="updatedAt">-</span></p></div><div class="map-search"><span>⌕</span><input id="mapSearch" placeholder="ค้นหาตึก, คณะ หรือโซนจอดรถ" /></div></section><section class="map-layout"><article class="campus-map"><div class="map-label main-building">อาคาร BU Landmark</div><div class="map-label diamond-building">ตึกเพชร</div><div class="map-label comm-building">คณะนิเทศศาสตร์</div><div class="map-label food-building">โรงอาหารกลาง</div><div class="road r1"></div><div class="road r2"></div><div class="road r3"></div><div id="mapPins"></div><div class="map-compass">N<br />↑</div><div class="map-credit">แผนผังประกอบ · Bangkok University Rangsit</div></article><aside class="map-side"><div class="legend"><span><i class="pin green"></i>ว่าง</span><span><i class="pin yellow"></i>ใกล้เต็ม</span><span><i class="pin red"></i>เต็ม</span></div><div class="filter-pills"><button class="filter active" data-filter="all">ทั้งหมด</button><button class="filter" data-filter="green">ว่าง</button><button class="filter" data-filter="yellow">ใกล้เต็ม</button><button class="filter" data-filter="red">เต็ม</button></div><div id="mapZoneList" class="map-zone-list"></div></aside></section></div>
+
+        <div id="reservation" class="page"><section class="page-heading"><span class="eyebrow">YOUR BOOKING</span><h2>การจองและคิวรอ</h2><p>จัดการสิทธิ์การใช้ที่จอดรถมอเตอร์ไซค์ของคุณ</p></section><section class="reservation-page-grid"><article class="glass-card booking-detail"><div id="bookingBody" class="hidden"><div class="booking-status"><span><i class="live-dot"></i> ยืนยันการจองแล้ว</span><b id="bookingTime">-</b></div><div class="big-slot"><span id="bigSlotSpace">-</span><small id="bigSlotZone">-</small></div><div class="booking-detail-grid"><div><small>จองเมื่อ</small><strong id="resCreated">-</strong></div><div><small>ต้องมาถึงก่อน</small><strong id="resExpire">-</strong></div><div><small>ทะเบียนรถ</small><strong id="resPlate">-</strong></div></div><button id="navigateBtn2" class="primary-btn">⌖ เปิดเส้นทางด้วย Google Maps</button></div><div id="bookingEmpty"><span class="eyebrow">NO ACTIVE BOOKING</span><h3>ยังไม่มีการจองที่ใช้งานอยู่</h3><p class="muted" style="margin-top:8px">เลือกโซนที่ว่างจากแผนผัง แล้วกด "จองที่จอด" ระบบจะกันช่องไว้ให้ตามเวลาที่เลือก</p><button class="primary-btn" data-page-go="map" style="max-width:270px">ไปที่แผนผังลานจอด <b>→</b></button></div></article><article class="glass-card wait-card"><span class="eyebrow">WAITING LIST</span><h3>โซนเต็ม? เข้าคิวรอ</h3><p>เพิ่มตัวเองในคิว เมื่อโซนนั้นมีช่องว่าง เราจะแจ้งเตือนคุณทันที</p><select id="waitZone"></select><button id="joinWaitlist" class="outline-btn">เข้าคิวรอ <span>→</span></button><p id="waitResult" class="form-success"></p><div id="waitList" class="my-rewards"></div></article></section></div>
+
+        <div id="rewards" class="page"><section class="page-heading"><span class="eyebrow">CHECK-IN &amp; POINT SYSTEM</span><h2>เช็คอิน สะสม และแลกคะแนน</h2><p>เช็คอินเมื่อจอดรถ รายงานสถานะลาน แล้วนำคะแนนไปแลกสิทธิประโยชน์</p></section>
+          <section class="points-grid"><article class="glass-card pts-card"><span class="eyebrow">คะแนนสะสม</span><strong id="ptsBalance">0</strong><small>ใช้แลกสิทธิประโยชน์ได้</small></article><article class="glass-card pts-card"><span class="eyebrow">PARKING SCORE</span><strong id="ptsScore">90</strong><small>คะแนนพฤติกรรม (เต็ม 100)</small></article><article class="glass-card pts-card"><span class="eyebrow">เช็คอินวันนี้</span><strong id="ptsCheckins">0 / 3</strong><small>เช็คอินได้โซนละ 1 ครั้งต่อวัน</small></article></section>
+          <section class="two-column"><article class="glass-card zones-card"><div class="card-heading"><div><span class="eyebrow">CHECK-IN</span><h3>เช็คอินที่จอดมอเตอร์ไซค์ <small style="color:#8f9aa8;font-weight:400">+3 คะแนน</small></h3></div></div><div id="sessionBox" class="my-rewards"></div><div id="checkinGrid" class="checkin-grid"></div></article><article class="glass-card reservation-card"><div class="card-heading"><div><span class="eyebrow">REWARDS</span><h3>แลกสิทธิประโยชน์</h3></div></div><div id="rewardList" class="reward-list"></div><div id="myCoupons" class="my-rewards"></div></article></section>
+          <article class="glass-card zones-card" style="margin-top:18px"><div class="card-heading"><div><span class="eyebrow">POINT LEDGER</span><h3>ประวัติคะแนนล่าสุด</h3></div></div><div id="ledgerList" class="ledger"></div></article></div>
+
+        <div id="history" class="page"><section class="page-heading"><span class="eyebrow">ACTIVITY LOG</span><h2>ประวัติการจอดรถ</h2><p>ดูสถิติและรายการใช้บริการย้อนหลัง</p></section><article class="glass-card table-card"><div class="history-summary"><div><span>จำนวนครั้งในเดือนนี้</span><strong><b id="hCount" style="display:inline">0</b> <small>ครั้ง</small></strong></div><div><span>เวลาจอดเฉลี่ย</span><strong><b id="hAvg" style="display:inline">—</b> <small>ชม.</small></strong></div><div><span>ตรงเวลาตามนัด</span><strong><b id="hOnTime" style="display:inline">—</b><small>%</small></strong></div></div><div class="table-wrap"><table><thead><tr><th>วันที่</th><th>พื้นที่จอดรถ</th><th>ระยะเวลา</th><th>สถานะ</th></tr></thead><tbody id="historyBody"></tbody></table></div></article></div>
+
+        <div id="guide" class="page"><section class="page-heading"><span class="eyebrow">HOW TO USE</span><h2>แนะนำการใช้งาน</h2><p>4 ขั้นตอนง่าย ๆ สำหรับผู้ใช้ใหม่ของ MotoBike Parking at BU</p></section>
+          <div class="guide-wrap">
+            <article class="glass-card guide-card"><h3><span class="guide-no">1</span>สมัครสมาชิกและเข้าสู่ระบบด้วยอีเมล @bumail.net</h3><ol><li>ที่หน้าแรกกด <b>"ลงทะเบียนด้วยอีเมล @bumail.net"</b></li><li>กรอกชื่อ-นามสกุล อีเมลที่ลงท้ายด้วย <b>@bumail.net</b> เท่านั้น รหัสนักศึกษา 10 หลัก ทะเบียนรถ (ไม่บังคับ) และรหัสผ่านอย่างน้อย 8 ตัวอักษร</li><li>กด <b>"สมัครสมาชิกและเข้าสู่ระบบ"</b> ระบบจะเปิดบัญชีและพาเข้าใช้งานทันที ไม่ต้องรออีเมลยืนยัน</li><li>ครั้งต่อไปให้เข้าสู่ระบบด้วยอีเมล รหัสนักศึกษา และรหัสผ่าน ติ๊ก "จดจำการเข้าสู่ระบบ" เพื่อคงสถานะไว้</li></ol><div class="tip">อีเมลโดเมนอื่น เช่น @gmail.com จะไม่สามารถสมัครหรือเข้าสู่ระบบได้</div></article>
+            <article class="glass-card guide-card"><h3><span class="guide-no">2</span>ตรวจสอบโซนจอดมอเตอร์ไซค์ว่างแบบเรียลไทม์</h3><ol><li>ดูภาพรวมจำนวนช่องว่างทุกโซนได้ที่หน้า <b>"ภาพรวม"</b></li><li>เปิด <b>"แผนผังลานจอด"</b> เพื่อดูพินสีของแต่ละโซน: <b>เขียว</b> = ว่าง, <b>เหลือง</b> = ใกล้เต็ม, <b>แดง</b> = เต็ม ตัวเลขบนพินคือจำนวนช่องว่าง</li><li>ใช้ช่องค้นหาและปุ่มกรองเพื่อหาโซนที่ต้องการ สถานะอัปเดตอัตโนมัติทุก 10 วินาที</li></ol></article>
+            <article class="glass-card guide-card"><h3><span class="guide-no">3</span>จองช่องจอด และรายงานสถานะที่จอดรถ</h3><ul><li><b>จองช่องจอด:</b> กดพินหรือปุ่ม "จองที่จอด" ของโซนที่ว่าง เลือกเวลาที่จะมาถึง (15 หรือ 20 นาที) แล้วกด "ยืนยันการจอง" ระบบจะกันช่องไว้ให้ตามเวลานั้น</li><li><b>เมื่อมาถึง:</b> ไปที่ "เช็คอิน &amp; คะแนน" แล้วเช็คอินโซนที่จอง จะได้คะแนนและ Parking Score ตามเวลา เมื่อออกจากลานให้กด "เช็คเอาท์" เพื่อคืนช่อง</li><li><b>โซนเต็ม:</b> กด "เข้าคิวรอ" ระบบจะแจ้งเตือนเมื่อมีช่องว่าง</li><li><b>รายงานสถานะ:</b> เมนู "รายงานสถานะ" ใช้แจ้งปัญหา เช่น ลานเต็มกว่าที่แสดง ช่องชำรุด หรือรถจอดขวางทาง</li></ul><div class="tip">ยกเลิกการจองได้ฟรีเมื่อยังเหลือเวลาถือสิทธิ์มากกว่า 5 นาที หากยกเลิกกระชั้นชิดหรือไม่มาตามเวลา จะถูกหัก Parking Score 10 คะแนน</div></article>
+            <article class="glass-card guide-card"><h3><span class="guide-no">4</span>สะสมและแลกรับคะแนน (Point System)</h3><ul><li><b>เช็คอินที่จอด +3 คะแนน</b> (โซนละ 1 ครั้งต่อวัน สูงสุด 3 ครั้งต่อวัน)</li><li><b>รายงานสถานะ/ปัญหา +5 คะแนน</b> (สูงสุด 3 รายงานต่อวัน)</li><li><b>มาถึงตามเวลาที่จอง +2 Parking Score</b></li><li>นำคะแนนไปแลกที่หน้า <b>"เช็คอิน &amp; คะแนน"</b> เช่น เพิ่ม Parking Score, ขยายเวลาถือสิทธิ์จอง 30 นาที, คูปองกาแฟ และส่วนลดล้างรถ</li><li>ดูประวัติการได้และใช้คะแนนทั้งหมดได้ในส่วน "ประวัติคะแนนล่าสุด"</li></ul></article>
+          </div></div>
+
+        <div id="profile" class="page"><section class="page-heading"><span class="eyebrow">ACCOUNT &amp; REWARDS</span><h2>โปรไฟล์ของฉัน</h2><p>จัดการข้อมูลส่วนตัวและคะแนนการจอดรถ</p></section><section class="profile-grid"><article class="glass-card user-profile"><div class="profile-large-avatar">M</div><h3 id="profileName">-</h3><p>นักศึกษามหาวิทยาลัยกรุงเทพ</p><div class="profile-meta"><span><small>รหัสนักศึกษา</small><b id="pId">-</b></span><span><small>อีเมล</small><b id="pEmail">-</b></span><span><small>ทะเบียนรถ</small><b id="pPlate">-</b></span><span><small>คะแนนสะสม</small><b id="pPoints">0</b></span></div><button class="outline-btn" id="editProfile">แก้ไขชื่อ / ทะเบียนรถ</button></article><article class="glass-card score-detail"><span class="eyebrow">PARKING SOCIAL CREDIT</span><h3>คะแนนพฤติกรรมการจอดรถ</h3><div class="score-meter"><div class="meter-number"><strong id="scoreProfile">90</strong><span id="scoreLabel">ดีมาก</span></div><div class="meter-track"><i id="scoreMarker"></i></div><div class="meter-labels"><span>0</span><span>50</span><span>100</span></div></div><div class="score-rules"><p><i class="positive">+</i> มาถึงตามเวลาที่จอง <b>+2 คะแนน</b></p><p><i class="negative">−</i> ไม่มาตามเวลาที่จอง <b>−10 คะแนน</b></p><p><i class="negative">−</i> ยกเลิกกระชั้นชิด (เหลือ &lt; 5 นาที) <b>−10 คะแนน</b></p></div></article></section></div>
+
+        <div id="report" class="page"><section class="page-heading"><span class="eyebrow">COMMUNITY CARE</span><h2>รายงานสถานะที่จอดรถ</h2><p>ช่วยให้ข้อมูลลานจอดถูกต้องและปลอดภัยสำหรับทุกคน</p></section><article class="glass-card report-card"><form id="reportForm"><label>ประเภทรายงาน<select id="issueType"><option>ลานจอดเต็มกว่าที่ระบบแสดง</option><option>มีช่องว่างมากกว่าที่ระบบแสดง</option><option>มีรถจอดขวางทาง</option><option>ช่องจอดชำรุด / มีสิ่งกีดขวาง</option><option>ไฟส่องสว่างไม่เพียงพอ</option><option>อื่น ๆ</option></select></label><label>บริเวณที่พบ<select id="reportZone"></select></label><label>รายละเอียดเพิ่มเติม<textarea id="reportText" placeholder="อธิบายสิ่งที่พบ เพื่อให้ทีมงานช่วยเหลือได้รวดเร็ว"></textarea></label><button class="primary-btn" type="submit">ส่งรายงาน <b>→</b></button><p id="reportResult" class="form-success"></p></form><aside><div class="reward-big">+5</div><h3>รับคะแนนช่วยเหลือ</h3><p>ทุกรายงานที่ส่งสำเร็จจะได้รับคะแนนสะสมทันที (สูงสุด 3 รายงานต่อวัน)</p></aside></article></div>
+      </section>
+    </div>
+    <div id="toast" class="toast"><span>✓</span><p id="toastText"></p></div>
+    <div id="reserveModal" class="modal hidden"><div class="modal-card"><button id="closeModal" class="modal-close" aria-label="ปิด">×</button><span class="eyebrow">RESERVE A SPACE</span><h2 id="modalTitle">จองพื้นที่จอดรถ</h2><p id="modalSubtitle">ระบบจะกันที่จอดไว้ให้คุณ</p><div class="time-options" id="timeOptions"></div><div class="modal-info"><span>Parking Score ของคุณ</span><b><i></i> <span id="modalScore">90</span> / 100</b></div><button id="confirmReservation" class="primary-btn">ยืนยันการจอง <b>→</b></button></div></div>
+    <script src="app.js"></script>
+  </body>
+</html>
