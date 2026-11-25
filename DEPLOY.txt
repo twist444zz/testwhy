@@ -1,5 +1,0 @@
-BUS TIME static website
-
-Upload the complete contents of this folder to the hosting document root. Keep index.html, vendor/, and smart_bus_shelter_3d_showcase.html together. Do not upload only index.html.
-
-The app is static and needs no server runtime. The 3D showcase loads Tailwind CSS and Three.js from public CDNs, so that page requires internet access.
