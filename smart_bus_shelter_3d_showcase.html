@@ -1,0 +1,3048 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https:; object-src 'none'; base-uri 'none'">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Bus Shelter 3D Showcase | เดอะมอลล์ ไลฟ์สโตร์ บางแค - BUS TIME</title>
+    
+    <!-- Google Fonts: Noto Sans Thai & Noto Sans / Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans Thai"', 'Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        cyber: {
+                            bg: '#07090E',
+                            panel: '#0F172A',
+                            cyan: '#38BDF8',
+                            blue: '#0284C7',
+                            accent: '#22D3EE'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Three.js & OrbitControls via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #07090E;
+            font-family: 'Noto Sans Thai', 'Inter', sans-serif;
+            color: #F8FAFC;
+            user-select: none;
+        }
+
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+
+        /* Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-pill {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-pill:hover, .glass-pill.active {
+            background: rgba(14, 165, 233, 0.25);
+            border-color: #38BDF8;
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
+            color: #FFFFFF;
+        }
+
+        /* 3D Callout Pins Overlay */
+        #annotations-layer {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        .callout-pin {
+            position: absolute;
+            transform: translate(-50%, -100%);
+            pointer-events: auto;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: opacity 0.25s ease, transform 0.2s ease;
+            z-index: 12;
+        }
+
+        .callout-pin.hidden-pin {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        .callout-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 11px;
+            border-radius: 9999px;
+            background: rgba(7, 13, 25, 0.88);
+            border: 1px solid rgba(56, 189, 248, 0.65);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.65), 0 0 12px rgba(56, 189, 248, 0.35);
+            color: #F0F9FF;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+        }
+
+        .callout-pin:hover .callout-badge,
+        .callout-pin.selected .callout-badge {
+            background: #0284C7;
+            border-color: #BAE6FD;
+            box-shadow: 0 0 22px rgba(56, 189, 248, 0.85);
+            transform: scale(1.06);
+        }
+
+        .callout-stem {
+            width: 2px;
+            height: 22px;
+            background: linear-gradient(to bottom, #38BDF8, rgba(56, 189, 248, 0.15));
+        }
+
+        .callout-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #38BDF8;
+            border: 2px solid #FFFFFF;
+            box-shadow: 0 0 10px #38BDF8, 0 0 20px #38BDF8;
+            animation: pulseDot 2s infinite;
+        }
+
+        @keyframes pulseDot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.35); opacity: 0.75; }
+        }
+
+        /* Custom Scrollbar for Kiosk Drawer */
+        .custom-scroll::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.4);
+            border-radius: 9999px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.7);
+        }
+
+        /* Hide horizontal scrollbar on mobile camera presets */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Loading Screen */
+        #loader {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: radial-gradient(circle at center, #0F172A 0%, #07090E 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Overlay -->
+    <div id="loader">
+        <div class="relative w-16 h-16 mb-5">
+            <div class="absolute inset-0 rounded-full border-4 border-sky-500/20"></div>
+            <div class="absolute inset-0 rounded-full border-4 border-t-sky-400 animate-spin"></div>
+            <div class="absolute inset-3 rounded-full bg-sky-500/20 flex items-center justify-center">
+                <svg class="w-6 h-6 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                </svg>
+            </div>
+        </div>
+        <h2 class="text-lg font-semibold text-white tracking-wide">กำลังโหลดโมเดล 3D ป้ายรถเมล์อัจฉริยะ...</h2>
+        <p class="text-xs text-sky-400/80 mt-1">เดอะมอลล์ ไลฟ์สโตร์ บางแค • เชื่อมต่อระบบ BUS TIME</p>
+    </div>
+
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Floating 3D Callout Annotations Layer -->
+    <div id="annotations-layer"></div>
+
+    <!-- Top Header HUD -->
+    <header class="fixed top-0 left-0 right-0 z-20 p-3 sm:p-5 pointer-events-none">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-start justify-between gap-3">
+            <!-- Station Title Badge -->
+            <div class="glass-panel rounded-2xl px-4 py-3 pointer-events-auto flex items-center gap-3.5 max-w-full">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/30 shrink-0">
+                    <!-- Bus Icon SVG -->
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 6v6m8-6v6M4 10h16M5 18h14a2 2 0 002-2V7a3 3 0 00-3-3H6a3 3 0 00-3 3v9a2 2 0 002 2zm1 0v2m12-2v2M7 14h.01M17 14h.01"></path>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                            SMART BUS SHELTER • THONBURI
+                        </span>
+                        <span class="flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                            BUS TIME LIVE
+                        </span>
+                    </div>
+                    <h1 class="text-sm sm:text-lg font-bold text-white truncate mt-0.5">
+                        ป้ายรถเมล์อัจฉริยะ เดอะมอลล์ ไลฟ์สโตร์ บางแค
+                    </h1>
+                    <p class="text-[11px] sm:text-xs text-slate-300/90 truncate">
+                        The Mall Lifestore Bangkae • เชื่อมต่อ MRT หลักสอง (BL38)
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Controls: Toggle Pins, Kiosk Simulator, Auto-Rotate -->
+            <div class="flex items-center gap-2 pointer-events-auto ml-auto sm:ml-0">
+                <button id="btn-toggle-pins" onclick="toggleCalloutPins()" class="glass-pill active rounded-xl px-3 py-2.5 text-xs sm:text-sm font-medium flex items-center gap-2 text-sky-100" title="เปิด/ปิดป้ายชี้จุดอธิบาย">
+                    <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span class="hidden sm:inline">ป้ายชี้จุด</span>
+                    <span id="pin-status-badge" class="text-[10px] px-1.5 py-0.2 rounded bg-sky-400/20 text-sky-300">ON</span>
+                </button>
+
+                <button id="btn-auto-rotate" onclick="toggleAutoRotate()" class="glass-pill rounded-xl px-3 py-2.5 text-xs sm:text-sm font-medium flex items-center gap-2 text-slate-200" title="หมุนโมเดลอัตโนมัติ">
+                    <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span class="hidden md:inline">หมุนอัตโนมัติ</span>
+                </button>
+
+                <button id="btn-audio" onclick="toggleAmbientAudio()" class="glass-pill rounded-xl px-3 py-2.5 text-xs sm:text-sm font-medium flex items-center gap-1.5 text-slate-200" title="เปิด/ปิดเสียงสัญญาณป้ายอัจฉริยะ">
+                    <span id="audio-icon">🔇</span>
+                    <span class="hidden lg:inline">เสียง</span>
+                </button>
+
+                <button onclick="openKioskModal('eta')" class="rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-semibold bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-lg shadow-sky-500/30 flex items-center gap-2 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>เปิดจอ Kiosk</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Crowd & Smartphone POV Simulation Control Panel (Top-Right Below Header) -->
+    <aside class="fixed top-20 sm:top-24 right-3 sm:right-5 z-20 pointer-events-none flex flex-col items-end gap-2">
+        <div class="glass-panel rounded-2xl p-3 pointer-events-auto w-[250px] sm:w-[276px] space-y-2.5 border border-sky-400/35">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-[11px] font-bold tracking-wider uppercase text-sky-300">CROWD & BUS TIME AI</span>
+                </div>
+                <span id="npc-count-badge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300">12 คน</span>
+            </div>
+
+            <!-- Crowd Density Selector: 5 / 12 / 20 -->
+            <div>
+                <div class="text-[11px] text-slate-300 mb-1 flex justify-between">
+                    <span>ความหนาแน่นผู้คน:</span>
+                    <span id="crowd-mode-label" class="text-sky-400 font-medium">ปานกลาง</span>
+                </div>
+                <div class="grid grid-cols-3 gap-1 bg-slate-950/70 p-1 rounded-xl border border-slate-800">
+                    <button onclick="setCrowdDensity(5)" id="density-5" class="density-btn py-1.5 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white transition">น้อย (5)</button>
+                    <button onclick="setCrowdDensity(12)" id="density-12" class="density-btn py-1.5 rounded-lg text-[11px] font-semibold bg-sky-500/30 text-sky-200 border border-sky-400/50 transition">กลาง (12)</button>
+                    <button onclick="setCrowdDensity(20)" id="density-20" class="density-btn py-1.5 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white transition">เร่งด่วน (20)</button>
+                </div>
+            </div>
+
+            <!-- Zoom to NPC Using BUS TIME Web on Smartphone -->
+            <button id="btn-phone-pov" onclick="focusNextPhoneUser()" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-500/25 to-sky-500/25 hover:from-cyan-500/40 hover:to-sky-500/40 border border-sky-400/50 text-sky-100 text-xs font-semibold flex items-center justify-between transition shadow-md">
+                <span class="flex items-center gap-1.5">
+                    <span>📱</span>
+                    <span>ซูมดู NPC เล่นเว็บ BUS TIME</span>
+                </span>
+                <span id="phone-user-index" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-400/20 text-sky-300">POV</span>
+            </button>
+
+            <!-- Trigger Bus Arrival Simulation -->
+            <button id="btn-trigger-bus" onclick="triggerBusArrival()" class="w-full py-2 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/35 border border-emerald-400/45 text-emerald-200 text-xs font-semibold flex items-center justify-between transition">
+                <span class="flex items-center gap-1.5">
+                    <span>🚌</span>
+                    <span id="bus-sim-label">จำลองรถเมล์เข้าป้าย</span>
+                </span>
+                <span id="bus-sim-status" class="text-[10px] font-mono text-emerald-300">READY</span>
+            </button>
+
+            <!-- Active Follow Target Banner -->
+            <div id="follow-target-bar" class="hidden items-center justify-between bg-sky-950/90 border border-sky-400/40 rounded-xl px-2.5 py-1.5 text-[11px]">
+                <span id="follow-target-name" class="text-sky-200 truncate font-medium">กำลังติดตาม NPC...</span>
+                <button onclick="clearNpcFocus()" class="text-rose-300 hover:text-rose-200 font-bold ml-2 shrink-0">ออก ✕</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Helper Hint Toast (Bottom-Left on Desktop) -->
+    <div id="hint-toast" class="fixed bottom-20 left-4 z-15 pointer-events-none hidden lg:flex items-center gap-2 glass-panel rounded-xl px-3.5 py-2 text-xs text-slate-300">
+        <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+        <span>ลากเมาส์หมุน 360° • คลิกที่ผู้โดยสารเพื่อซูมดูหน้าจอมือถือ BUS TIME หรือมุมมองระดับสายตา</span>
+    </div>
+        </div>
+    </header>
+
+    <!-- Helper Hint Toast (Bottom-Left on Desktop) -->
+    <div id="hint-toast" class="fixed bottom-20 left-4 z-15 pointer-events-none hidden lg:flex items-center gap-2 glass-panel rounded-xl px-3.5 py-2 text-xs text-slate-300">
+        <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+        <span>ลากเมาส์เพื่อหมุน 360° • เลื่อนลูกกลิ้งเพื่อซูม • คลิกที่ป้ายชี้จุดหรือหน้าจอ 3D เพื่อโต้ตอบ</span>
+    </div>
+
+    <!-- Bottom Camera Presets Bar -->
+    <nav class="fixed bottom-4 left-0 right-0 z-20 px-3 pointer-events-none">
+        <div class="max-w-3xl mx-auto flex justify-center">
+            <div class="glass-panel rounded-2xl p-1.5 pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full">
+                <button onclick="setCameraPreset('overview')" id="preset-overview" class="preset-btn glass-pill active rounded-xl px-3.5 py-2 text-xs sm:text-sm font-medium whitespace-nowrap flex items-center gap-1.5">
+                    <span>🏛️</span> ภาพรวมป้าย
+                </button>
+                <button onclick="setCameraPreset('kiosk')" id="preset-kiosk" class="preset-btn glass-pill rounded-xl px-3.5 py-2 text-xs sm:text-sm font-medium whitespace-nowrap flex items-center gap-1.5">
+                    <span>🖥️</span> ซูมดูตู้จอหน้าป้าย
+                </button>
+                <button onclick="setCameraPreset('eta')" id="preset-eta" class="preset-btn glass-pill rounded-xl px-3.5 py-2 text-xs sm:text-sm font-medium whitespace-nowrap flex items-center gap-1.5">
+                    <span>⏱️</span> ดูจอบอกเวลารถเข้าป้าย
+                </button>
+                <button onclick="setCameraPreset('mrt')" id="preset-mrt" class="preset-btn glass-pill rounded-xl px-3.5 py-2 text-xs sm:text-sm font-medium whitespace-nowrap flex items-center gap-1.5">
+                    <span>🚇</span> ดูจุดเชื่อมต่อ MRT หลักสอง
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Interactive Smart Kiosk & IoT Inspector Modal / Drawer -->
+    <div id="kiosk-modal" class="fixed inset-0 z-40 hidden items-center justify-end sm:p-4 bg-slate-950/60 backdrop-blur-sm transition-opacity">
+        <div class="glass-panel w-full sm:w-[460px] h-full sm:h-[92vh] sm:rounded-3xl flex flex-col overflow-hidden border border-sky-400/40 shadow-2xl shadow-sky-950/80 animate-slideIn">
+            
+            <!-- Kiosk Header -->
+            <div class="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-sky-950/70 to-slate-900 border-b border-sky-400/20 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-bold text-sky-400 tracking-wider uppercase">BUS TIME SMART KIOSK</span>
+                            <span id="kiosk-clock" class="text-[11px] text-slate-400 font-mono">18:33:00</span>
+                        </div>
+                        <h3 class="text-base font-bold text-white">เดอะมอลล์ ไลฟ์สโตร์ บางแค</h3>
+                    </div>
+                </div>
+                <button onclick="closeKioskModal()" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-rose-500/20 hover:text-rose-300 border border-slate-700 flex items-center justify-center text-slate-300 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Kiosk Navigation Tabs -->
+            <div class="grid grid-cols-4 gap-1 p-2 bg-slate-900/90 border-b border-slate-800 text-xs font-medium">
+                <button onclick="switchKioskTab('eta')" id="tab-eta" class="kiosk-tab py-2 px-1 rounded-xl bg-sky-500/25 text-sky-300 border border-sky-400/40 flex flex-col items-center gap-1 transition">
+                    <span>🚌</span>
+                    <span>BUS TIME</span>
+                </button>
+                <button onclick="switchKioskTab('routes')" id="tab-routes" class="kiosk-tab py-2 px-1 rounded-xl text-slate-400 hover:bg-slate-800 flex flex-col items-center gap-1 transition">
+                    <span>📋</span>
+                    <span>สายรถเมล์</span>
+                </button>
+                <button onclick="switchKioskTab('map')" id="tab-map" class="kiosk-tab py-2 px-1 rounded-xl text-slate-400 hover:bg-slate-800 flex flex-col items-center gap-1 transition">
+                    <span>🗺️</span>
+                    <span>แผนที่ & MRT</span>
+                </button>
+                <button onclick="switchKioskTab('iot')" id="tab-iot" class="kiosk-tab py-2 px-1 rounded-xl text-slate-400 hover:bg-slate-800 flex flex-col items-center gap-1 transition">
+                    <span>📡</span>
+                    <span>IoT & CCTV</span>
+                </button>
+            </div>
+
+            <!-- Kiosk Dynamic Body Content -->
+            <div id="kiosk-content" class="flex-1 overflow-y-auto custom-scroll p-4 sm:p-5 space-y-4">
+                <!-- Populated dynamically by JS -->
+            </div>
+
+            <!-- Kiosk Footer Status -->
+            <div class="px-4 py-3 bg-slate-950/90 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span>รหัสป้ายหยุดรถ: <strong class="text-slate-200">THB-BK-001</strong></span>
+                </div>
+                <span>Free Wi-Fi: <strong class="text-sky-400">@BangkhaeSmartBus</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * 1. DATA & REAL-TIME STATE (BUS TIME & SMART SHELTER TELEMETRY)
+         * ============================================================================
+         */
+        const liveBusData = [
+            { line: '84', dest: 'วัดไร่ขิง - สถานีรถไฟฟ้ากรุงธนบุรี', type: 'EV ปรับอากาศ', etaSec: 35, crowd: 'ปานกลาง', color: '#38BDF8' },
+            { line: '80', dest: 'วัดศรีนวลธรรมวิมล - สนามหลวง', type: 'EV ปรับอากาศ', etaSec: 120, crowd: 'ว่างมาก', color: '#22D3EE' },
+            { line: '509', dest: 'อู่พุทธมณฑลสาย 2 - หมอชิต 2', type: 'ยูโรทู ปรับอากาศ', etaSec: 300, crowd: 'หนาแน่น', color: '#F59E0B' },
+            { line: '147', dest: 'วงกลมเคหะธนบุรี - เดอะมอลล์บางแค', type: 'มินิบัส EV', etaSec: 480, crowd: 'ว่างมาก', color: '#34D399' },
+            { line: '7', dest: 'คลองขวาง - หัวลำโพง', type: 'EV ปรับอากาศ', etaSec: 660, crowd: 'ปานกลาง', color: '#38BDF8' },
+            { line: '101', dest: 'อู่พุทธมณฑลสาย 2 - วัดยายร่ม', type: 'รถธรรมดา', etaSec: 840, crowd: 'ว่างมาก', color: '#94A3B8' }
+        ];
+
+        const directoryRoutes = [
+            { line: '7', name: 'คลองขวาง - หัวลำโพง', operator: 'TSB (EV)', hours: '04:30 - 23:00' },
+            { line: '80', name: 'วัดศรีนวลธรรมวิมล - สนามหลวง', operator: 'ขสมก. / TSB', hours: '04:00 - 23:30' },
+            { line: '81', name: 'พุทธมณฑลสาย 5 - ปิ่นเกล้า', operator: 'TSB (EV)', hours: '04:30 - 22:30' },
+            { line: '84', name: 'วัดไร่ขิง - BTS กรุงธนบุรี', operator: 'ขสมก. / TSB', hours: '04:00 - 23:30' },
+            { line: '84ก', name: 'หมู่บ้านเอื้ออาทรศาลายา - วงเวียนใหญ่', operator: 'ขสมก.', hours: '05:00 - 22:00' },
+            { line: '91', name: 'หมู่บ้านเศรษฐกิจ - สนามหลวง', operator: 'ขสมก.', hours: '05:00 - 22:30' },
+            { line: '101', name: 'พุทธมณฑลสาย 2 - วัดยายร่ม', operator: 'ขสมก.', hours: '05:00 - 22:00' },
+            { line: '146', name: 'วงกลมบางแค - ตลิ่งชัน - ปิ่นเกล้า', operator: 'TSB (EV)', hours: '05:00 - 22:00' },
+            { line: '147', name: 'วงกลมเคหะธนบุรี - บางแค', operator: 'TSB (EV)', hours: '04:30 - 23:00' },
+            { line: '165', name: 'พุทธมณฑลสาย 3 - สำนักงานเขตบางกอกใหญ่', operator: 'ขสมก.', hours: '05:00 - 21:30' },
+            { line: '189', name: 'กระทุ่มแบน - สนามหลวง', operator: 'ขสมก.', hours: '04:30 - 22:00' },
+            { line: '509', name: 'อู่พุทธมณฑลสาย 2 - หมอชิต 2', operator: 'ขสมก.', hours: '04:00 - 23:00' },
+            { line: '547', name: 'มทร.รัตนโกสินทร์ ศาลายา - สวนลุมพินี', operator: 'TSB (EV)', hours: '04:30 - 22:30' }
+        ];
+
+        // Camera Presets Configuration
+        const cameraPresets = {
+            overview: {
+                pos: [6.8, 3.4, 8.6],
+                target: [0.2, 1.85, 0.0]
+            },
+            kiosk: {
+                pos: [4.1, 1.85, 3.1],
+                target: [4.1, 1.55, 0.25]
+            },
+            eta: {
+                pos: [-2.3, 2.35, 3.1],
+                target: [-2.6, 2.55, 0.35]
+            },
+            mrt: {
+                pos: [-5.8, 2.8, 6.2],
+                target: [-6.2, 2.1, -0.8]
+            },
+            cctv1: {
+                pos: [-3.6, 2.5, 3.2],
+                target: [-4.1, 2.95, 0.7]
+            },
+            cctv2: {
+                pos: [3.6, 2.5, 3.2],
+                target: [4.1, 2.95, 0.7]
+            },
+            directory: {
+                pos: [-0.3, 1.85, 2.9],
+                target: [-0.3, 1.65, -0.75]
+            },
+            usb1: {
+                pos: [-3.6, 1.35, 2.4],
+                target: [-4.15, 1.15, 0.35]
+            },
+            usb2: {
+                pos: [3.2, 1.35, 2.4],
+                target: [3.55, 1.15, 0.35]
+            }
+        };
+
+        // Callout Pins Definition (linked to 3D Anchors)
+        const calloutDefinitions = [
+            { id: 'cctv1', label: 'กล้องวงจรปิด 1 (ซ้าย)', icon: '📹', anchor: [-4.15, 3.05, 0.75], preset: 'cctv1', tab: 'iot' },
+            { id: 'cctv2', label: 'กล้องวงจรปิด 2 (ขวา)', icon: '📹', anchor: [4.15, 3.05, 0.75], preset: 'cctv2', tab: 'iot' },
+            { id: 'eta', label: 'จอบอกเวลารถเมล์เข้าป้าย (BUS TIME)', icon: '⏱️', anchor: [-2.65, 2.62, 0.45], preset: 'eta', tab: 'eta' },
+            { id: 'directory', label: 'ป้ายบอกสายรถเมล์', icon: '📋', anchor: [-0.35, 1.75, -0.72], preset: 'directory', tab: 'routes' },
+            { id: 'kiosk', label: 'ตู้จอประชาสัมพันธ์ข่าวสาร & แผนที่', icon: '🖥️', anchor: [4.15, 1.65, 0.35], preset: 'kiosk', tab: 'map' },
+            { id: 'usb1', label: 'ช่องชาร์จ USB 1 (ซ้าย)', icon: '⚡', anchor: [-4.15, 1.12, 0.38], preset: 'usb1', tab: 'iot' },
+            { id: 'usb2', label: 'ช่องชาร์จ USB 2 (ขวา)', icon: '⚡', anchor: [3.52, 1.12, 0.38], preset: 'usb2', tab: 'iot' }
+        ];
+
+        /**
+         * ============================================================================
+         * 2. THREE.JS SCENE SETUP & PROCEDURAL HIGH-RES TEXTURES
+         * ============================================================================
+         */
+        let scene, camera, renderer, controls;
+        let showPins = true;
+        let isAnimatingCamera = false;
+        let targetCamPos = null;
+        let targetLookAt = null;
+
+        // Dynamic Canvas Textures for Real-Time Updating Screens
+        let etaCanvas, etaCtx, etaTexture;
+        let kioskCanvas, kioskCtx, kioskTexture;
+        let phoneCanvas, phoneCtx, phoneTexture;
+        let phoneScrollOffset = 0;
+        let cctvLeds = [];
+        let usbRings = [];
+        let movingBuses = [];
+        let interactiveMeshes = []; // For Raycasting clicks on 3D screens & NPCs
+
+        // Crowd Simulation & Hero Arrival Bus State
+        const SIDEWALK_TOP_Y = 0.24; // Exact top surface Y of sidewalk platform
+        const BENCH_SEAT_Y = 0.47;   // Exact top surface Y of wooden bench slats (relative to sidewalk)
+        let crowdDensity = 12;
+        let npcAgents = [];
+        let npcHitboxes = [];
+        let focusedNpc = null;
+        let focusMode = 'eye'; // 'phone' | 'eye'
+        let phoneUserCycleIdx = 0;
+
+        // Static Scene Obstacles (XZ circles/capsules for strict collision avoidance)
+        const sceneObstacles = [
+            { x: -4.15, z: -1.25, r: 0.32 }, // Rear Left Pillar
+            { x:  3.52, z: -1.25, r: 0.32 }, // Rear Right Pillar
+            { x: -4.15, z: -0.15, r: 0.32 }, // Front Left Pillar
+            { x:  3.52, z: -0.15, r: 0.32 }, // Front Right Pillar
+            { x:  4.15, z:  0.05, r: 0.62 }, // Digital Kiosk Pedestal
+            // Bench segmented circles along X = [-2.9, 2.2], Z = -0.65
+            { x: -2.5, z: -0.65, r: 0.48 },
+            { x: -1.6, z: -0.65, r: 0.48 },
+            { x: -0.7, z: -0.65, r: 0.48 },
+            { x:  0.2, z: -0.65, r: 0.48 },
+            { x:  1.1, z: -0.65, r: 0.48 },
+            { x:  2.0, z: -0.65, r: 0.48 }
+        ];
+
+        // Hero Arrival Bus Simulation State
+        let heroBus = null;
+        let heroBusDoorFront = null;
+        let heroBusDoorRear = null;
+        let heroBusState = {
+            phase: 'IDLE', // 'IDLE' | 'APPROACHING' | 'DOCKED' | 'DEPARTING'
+            x: -36,
+            speed: 0,
+            doorOpen: 0,
+            dockTimer: 0,
+            line: '84'
+        };
+
+        // Optional Web Audio Chime
+        let audioEnabled = false;
+        let audioCtx = null;
+
+        function initThreeScene() {
+            const container = document.getElementById('canvas-container');
+
+            // Hydrate cameraPresets & calloutDefinitions into THREE.Vector3 safely
+            Object.keys(cameraPresets).forEach(k => {
+                const p = cameraPresets[k];
+                if (Array.isArray(p.pos)) p.pos = new THREE.Vector3(...p.pos);
+                if (Array.isArray(p.target)) p.target = new THREE.Vector3(...p.target);
+            });
+            calloutDefinitions.forEach(c => {
+                if (Array.isArray(c.anchor)) c.anchor = new THREE.Vector3(...c.anchor);
+            });
+            targetCamPos = new THREE.Vector3();
+            targetLookAt = new THREE.Vector3();
+
+            // Scene & Atmospheric Night Fog
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color('#07090E');
+            scene.fog = new THREE.FogExp2('#07090E', 0.024);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.08, 150);
+            camera.position.copy(cameraPresets.overview.pos);
+
+            // WebGL Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.15;
+            container.appendChild(renderer.domElement);
+
+            // OrbitControls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.target.copy(cameraPresets.overview.target);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.06;
+            controls.minDistance = 0.45; // Allow close-up inspection of smartphone screen!
+            controls.maxDistance = 24;
+            controls.maxPolarAngle = Math.PI / 2 - 0.02;
+            controls.autoRotate = false;
+            controls.autoRotateSpeed = 0.65;
+
+            // Cancel smooth camera transition or NPC follow if user manually drags
+            controls.addEventListener('start', () => {
+                isAnimatingCamera = false;
+            });
+
+            setupLighting();
+            buildEnvironment();
+            buildSmartBusShelter();
+            buildMRTConnectionWalkway();
+            buildBackgroundCityAndTraffic();
+            buildHeroArrivalBus();
+            initSmartphoneWebTexture();
+            buildNpcCrowd(crowdDensity);
+            createCalloutDOMElements();
+
+            // Window Resize & Click Raycaster
+            window.addEventListener('resize', onWindowResize);
+            setupRaycasterInteraction();
+
+            // Hide Loader smoothly
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.visibility = 'hidden', 600);
+            }, 650);
+        }
+
+        function setupLighting() {
+            // Ambient base
+            const ambient = new THREE.AmbientLight('#1E293B', 1.35);
+            scene.add(ambient);
+
+            // Cool Moonlight / City Sky Directional Light
+            const dirLight = new THREE.DirectionalLight('#93C5FD', 1.25);
+            dirLight.position.set(10, 18, 12);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 1;
+            dirLight.shadow.camera.far = 45;
+            const d = 14;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            dirLight.shadow.bias = -0.0005;
+            scene.add(dirLight);
+
+            // Under-canopy Cool White & Cyan LED Spotlights
+            const shelterSpot1 = new THREE.PointLight('#E0F2FE', 1.6, 8);
+            shelterSpot1.position.set(-2.2, 3.05, 0.1);
+            scene.add(shelterSpot1);
+
+            const shelterSpot2 = new THREE.PointLight('#E0F2FE', 1.6, 8);
+            shelterSpot2.position.set(2.2, 3.05, 0.1);
+            scene.add(shelterSpot2);
+
+            // Cyan Accent Glow under roof
+            const cyanAccent = new THREE.PointLight('#38BDF8', 1.8, 10);
+            cyanAccent.position.set(0, 3.25, 0.8);
+            scene.add(cyanAccent);
+
+            // Kiosk Screen Glow
+            const kioskGlow = new THREE.PointLight('#38BDF8', 1.1, 4.5);
+            kioskGlow.position.set(4.15, 1.5, 0.9);
+            scene.add(kioskGlow);
+        }
+
+        /**
+         * ============================================================================
+         * 3. ENVIRONMENT: ROAD, SIDEWALK, TACTILE PAVING (BRAILLE BLOCKS)
+         * ============================================================================
+         */
+        function buildEnvironment() {
+            // Sidewalk Platform Texture (Tiles + Yellow Tactile Braille Paving)
+            const swCanvas = document.createElement('canvas');
+            swCanvas.width = 1024;
+            swCanvas.height = 1024;
+            const ctx = swCanvas.getContext('2d');
+
+            // Base concrete tiles
+            ctx.fillStyle = '#1E2533';
+            ctx.fillRect(0, 0, 1024, 1024);
+
+            // Grid lines
+            ctx.strokeStyle = '#111622';
+            ctx.lineWidth = 4;
+            for (let i = 0; i <= 1024; i += 64) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1024, i); ctx.stroke();
+            }
+
+            // Yellow Tactile Paving Strip near curb (Braille blocks for visually impaired)
+            const tactileY = 760;
+            const tactileH = 74;
+            ctx.fillStyle = '#D97706';
+            ctx.fillRect(0, tactileY, 1024, tactileH);
+            ctx.fillStyle = '#F59E0B';
+            for (let x = 12; x < 1024; x += 24) {
+                for (let y = tactileY + 12; y < tactileY + tactileH - 8; y += 24) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Curb edge warning stripes
+            ctx.fillStyle = '#0F172A';
+            ctx.fillRect(0, 960, 1024, 64);
+            ctx.fillStyle = '#EAB308';
+            for (let x = 0; x < 1024; x += 128) {
+                ctx.fillRect(x, 965, 64, 54);
+            }
+
+            const swTex = new THREE.CanvasTexture(swCanvas);
+            swTex.wrapS = THREE.RepeatWrapping;
+            swTex.wrapT = THREE.ClampToEdgeWrapping;
+            swTex.repeat.set(6, 1);
+
+            const sidewalkGeo = new THREE.BoxGeometry(44, 0.24, 7.5);
+            const sidewalkMat = new THREE.MeshStandardMaterial({
+                map: swTex,
+                roughness: 0.45,
+                metalness: 0.15
+            });
+            const sidewalk = new THREE.Mesh(sidewalkGeo, sidewalkMat);
+            sidewalk.position.set(0, 0.12, -1.2);
+            sidewalk.receiveShadow = true;
+            scene.add(sidewalk);
+
+            // Asphalt Road (Phetkasem Road in front of The Mall Bangkae)
+            const roadCanvas = document.createElement('canvas');
+            roadCanvas.width = 1024;
+            roadCanvas.height = 1024;
+            const rCtx = roadCanvas.getContext('2d');
+            rCtx.fillStyle = '#0B0F17';
+            rCtx.fillRect(0, 0, 1024, 1024);
+
+            // Subtle asphalt noise
+            for (let i = 0; i < 18000; i++) {
+                rCtx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.25)';
+                rCtx.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2);
+            }
+
+            // Bus Bay Yellow Zig-Zag / Lane Marking
+            rCtx.strokeStyle = '#F59E0B';
+            rCtx.lineWidth = 10;
+            rCtx.setLineDash([45, 35]);
+            rCtx.beginPath();
+            rCtx.moveTo(0, 260);
+            rCtx.lineTo(1024, 260);
+            rCtx.stroke();
+
+            // White dashed lane dividers
+            rCtx.strokeStyle = 'rgba(226, 232, 240, 0.45)';
+            rCtx.lineWidth = 8;
+            rCtx.setLineDash([60, 60]);
+            rCtx.beginPath();
+            rCtx.moveTo(0, 560);
+            rCtx.lineTo(1024, 560);
+            rCtx.stroke();
+
+            const roadTex = new THREE.CanvasTexture(roadCanvas);
+            roadTex.wrapS = THREE.RepeatWrapping;
+            roadTex.wrapT = THREE.RepeatWrapping;
+            roadTex.repeat.set(8, 2);
+
+            const roadGeo = new THREE.PlaneGeometry(80, 26);
+            const roadMat = new THREE.MeshStandardMaterial({
+                map: roadTex,
+                roughness: 0.32, // Slight wet night sheen reflecting LED lights
+                metalness: 0.25
+            });
+            const road = new THREE.Mesh(roadGeo, roadMat);
+            road.rotation.x = -Math.PI / 2;
+            road.position.set(0, 0.01, 14.5);
+            road.receiveShadow = true;
+            scene.add(road);
+        }
+
+        /**
+         * ============================================================================
+         * 4. 3D SMART BUS SHELTER ARCHITECTURE (HERO MODEL)
+         * ============================================================================
+         */
+        function buildSmartBusShelter() {
+            const shelterGroup = new THREE.Group();
+            shelterGroup.position.set(0, 0.24, -0.6); // On top of sidewalk
+            scene.add(shelterGroup);
+
+            // Materials
+            const darkSteelMat = new THREE.MeshStandardMaterial({
+                color: '#1E293B',
+                roughness: 0.3,
+                metalness: 0.8
+            });
+            const brushedMetalMat = new THREE.MeshStandardMaterial({
+                color: '#64748B',
+                roughness: 0.25,
+                metalness: 0.85
+            });
+            const cyanLedMat = new THREE.MeshStandardMaterial({
+                color: '#38BDF8',
+                emissive: '#38BDF8',
+                emissiveIntensity: 2.2,
+                roughness: 0.1
+            });
+            const warmWhiteLedMat = new THREE.MeshStandardMaterial({
+                color: '#F8FAFC',
+                emissive: '#BAE6FD',
+                emissiveIntensity: 1.5
+            });
+            const glassMat = new THREE.MeshPhysicalMaterial({
+                color: '#BAE6FD',
+                transparent: true,
+                opacity: 0.24,
+                roughness: 0.08,
+                metalness: 0.1,
+                transmission: 0.65
+            });
+
+            // --- A. MAIN STRUCTURAL PILLARS (4 Heavy Modern Columns) ---
+            const pillarPositions = [
+                [-4.15, 0, -0.65], // Rear Left
+                [ 3.52, 0, -0.65], // Rear Right
+                [-4.15, 0,  0.45], // Front-Mid Left
+                [ 3.52, 0,  0.45]  // Front-Mid Right
+            ];
+
+            pillarPositions.forEach(([px, py, pz]) => {
+                // Base flange
+                const base = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.08, 0.32), darkSteelMat);
+                base.position.set(px, 0.04, pz);
+                base.castShadow = true;
+                shelterGroup.add(base);
+
+                // Main vertical column
+                const col = new THREE.Mesh(new THREE.BoxGeometry(0.20, 3.15, 0.22), darkSteelMat);
+                col.position.set(px, 1.58, pz);
+                col.castShadow = true;
+                col.receiveShadow = true;
+                shelterGroup.add(col);
+
+                // Vertical cyan LED accent strip on front columns
+                if (pz > 0) {
+                    const ledStrip = new THREE.Mesh(new THREE.BoxGeometry(0.025, 2.7, 0.02), cyanLedMat);
+                    ledStrip.position.set(px, 1.55, pz + 0.115);
+                    shelterGroup.add(ledStrip);
+                }
+            });
+
+            // Horizontal crossbeams linking front & rear columns
+            [-4.15, 3.52].forEach(px => {
+                const beam = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 1.3), darkSteelMat);
+                beam.position.set(px, 3.05, -0.1);
+                shelterGroup.add(beam);
+            });
+
+            // --- B. MODERN CURVED CANTILEVER ROOF & GLOWING LED TRIM ---
+            const roofWidth = 8.9;
+            const roofDepth = 2.75;
+            const roofGroup = new THREE.Group();
+            roofGroup.position.set(-0.25, 3.22, 0.35);
+            shelterGroup.add(roofGroup);
+
+            // Curved Roof Profile using ExtrudeGeometry
+            const roofShape = new THREE.Shape();
+            const hw = roofDepth / 2;
+            roofShape.moveTo(-hw, 0);
+            roofShape.quadraticCurveTo(0, 0.32, hw, 0.08);
+            roofShape.lineTo(hw, 0.22);
+            roofShape.quadraticCurveTo(0, 0.46, -hw, 0.14);
+            roofShape.closePath();
+
+            const extrudeSettings = { steps: 1, depth: roofWidth, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3 };
+            const roofGeo = new THREE.ExtrudeGeometry(roofShape, extrudeSettings);
+            roofGeo.rotateY(Math.PI / 2);
+            roofGeo.translate(-roofWidth / 2, 0, 0);
+
+            const roofMesh = new THREE.Mesh(roofGeo, darkSteelMat);
+            roofMesh.castShadow = true;
+            roofMesh.receiveShadow = true;
+            roofGroup.add(roofMesh);
+
+            // Glowing Cyan LED Strip running along front & side edges of roof
+            const frontLed = new THREE.Mesh(new THREE.BoxGeometry(roofWidth + 0.06, 0.045, 0.05), cyanLedMat);
+            frontLed.position.set(0, 0.14, hw + 0.02);
+            roofGroup.add(frontLed);
+
+            const backLed = new THREE.Mesh(new THREE.BoxGeometry(roofWidth + 0.06, 0.04, 0.04), cyanLedMat);
+            backLed.position.set(0, 0.07, -hw - 0.02);
+            roofGroup.add(backLed);
+
+            // Under-ceiling Recessed Light Panels
+            [-2.2, 0, 2.2].forEach(lx => {
+                const lightPanel = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.03, 0.45), warmWhiteLedMat);
+                lightPanel.position.set(lx, 0.12, 0.05);
+                roofGroup.add(lightPanel);
+            });
+
+            // --- C. STATION HEADER BOARD ("เดอะมอลล์ ไลฟ์สโตร์ บางแค") ---
+            const headerTex = createStationHeaderTexture();
+            const headerBoardGroup = new THREE.Group();
+            headerBoardGroup.position.set(-0.25, 3.68, 1.55);
+            shelterGroup.add(headerBoardGroup);
+
+            // Frame
+            const headerFrame = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.56, 0.16), darkSteelMat);
+            headerFrame.castShadow = true;
+            headerBoardGroup.add(headerFrame);
+
+            // Cyan border glow around header
+            const headerGlow = new THREE.Mesh(new THREE.BoxGeometry(6.46, 0.60, 0.12), cyanLedMat);
+            headerBoardGroup.add(headerGlow);
+
+            // Front illuminated sign face
+            const headerFaceMat = new THREE.MeshBasicMaterial({ map: headerTex });
+            const headerFaceFront = new THREE.Mesh(new THREE.PlaneGeometry(6.3, 0.48), headerFaceMat);
+            headerFaceFront.position.z = 0.085;
+            headerBoardGroup.add(headerFaceFront);
+
+            const headerFaceBack = new THREE.Mesh(new THREE.PlaneGeometry(6.3, 0.48), headerFaceMat);
+            headerFaceBack.rotation.y = Math.PI;
+            headerFaceBack.position.z = -0.085;
+            headerBoardGroup.add(headerFaceBack);
+
+            // --- D. REAR GLASS WINDSCREEN & BUS ROUTE DIRECTORY BOARD ---
+            // Glass Panels
+            const glassPanelsX = [-2.85, 2.25];
+            glassPanelsX.forEach(gx => {
+                const gFrame = new THREE.Mesh(new THREE.BoxGeometry(2.3, 2.45, 0.06), glassMat);
+                gFrame.position.set(gx, 1.55, -0.65);
+                shelterGroup.add(gFrame);
+
+                // Top & bottom aluminum rails
+                const topRail = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.06, 0.09), brushedMetalMat);
+                topRail.position.set(gx, 2.78, -0.65);
+                shelterGroup.add(topRail);
+
+                const botRail = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.06, 0.09), brushedMetalMat);
+                botRail.position.set(gx, 0.32, -0.65);
+                shelterGroup.add(botRail);
+            });
+
+            // Center Backlit Bus Route Directory Board (ป้ายบอกสายรถเมล์)
+            const dirGroup = new THREE.Group();
+            dirGroup.position.set(-0.35, 1.62, -0.62);
+            shelterGroup.add(dirGroup);
+
+            const dirCase = new THREE.Mesh(new THREE.BoxGeometry(2.35, 2.35, 0.14), darkSteelMat);
+            dirCase.castShadow = true;
+            dirGroup.add(dirCase);
+
+            const dirTrim = new THREE.Mesh(new THREE.BoxGeometry(2.40, 2.40, 0.08), cyanLedMat);
+            dirGroup.add(dirTrim);
+
+            const dirTex = createRouteDirectoryTexture();
+            const dirScreenMat = new THREE.MeshBasicMaterial({ map: dirTex });
+            const dirScreen = new THREE.Mesh(new THREE.PlaneGeometry(2.22, 2.22), dirScreenMat);
+            dirScreen.position.z = 0.075;
+            dirScreen.userData = { interactive: true, tab: 'routes', preset: 'directory', name: 'ป้ายบอกสายรถเมล์' };
+            interactiveMeshes.push(dirScreen);
+            dirGroup.add(dirScreen);
+
+            // --- E. MINIMALIST MODERN WAITING BENCH (ที่นั่งพักคอย) ---
+            const benchGroup = new THREE.Group();
+            benchGroup.position.set(-0.35, 0, -0.05);
+            shelterGroup.add(benchGroup);
+
+            const seatWoodMat = new THREE.MeshStandardMaterial({
+                color: '#B45309',
+                roughness: 0.4,
+                metalness: 0.1
+            });
+
+            // Bench Frame & Legs
+            [-2.4, -0.8, 0.8, 2.4].forEach(lx => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.46, 0.48), brushedMetalMat);
+                leg.position.set(lx, 0.23, 0);
+                leg.castShadow = true;
+                benchGroup.add(leg);
+
+                // Anti-sleep / Ergonomic Armrest Dividers
+                const armrest = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.44), brushedMetalMat);
+                armrest.position.set(lx, 0.58, 0);
+                benchGroup.add(armrest);
+            });
+
+            // Slatted Seat & Backrest
+            for (let s = 0; s < 4; s++) {
+                const slat = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.04, 0.09), seatWoodMat);
+                slat.position.set(0, 0.47, -0.15 + s * 0.11);
+                slat.castShadow = true;
+                benchGroup.add(slat);
+            }
+            for (let b = 0; b < 2; b++) {
+                const backSlat = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.09, 0.04), seatWoodMat);
+                backSlat.position.set(0, 0.68 + b * 0.13, -0.22);
+                backSlat.rotation.x = -0.15;
+                benchGroup.add(backSlat);
+            }
+
+            // --- F. HANGING REAL-TIME ETA SCREEN (จอบอกเวลารถเมล์เข้าป้าย - BUS TIME) ---
+            const etaGroup = new THREE.Group();
+            etaGroup.position.set(-2.65, 2.62, 0.95);
+            shelterGroup.add(etaGroup);
+
+            // Hanging brackets
+            [-0.55, 0.55].forEach(bx => {
+                const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.48, 8), darkSteelMat);
+                rod.position.set(bx, 0.45, 0);
+                etaGroup.add(rod);
+            });
+
+            // Screen housing
+            const etaBox = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.56, 0.14), darkSteelMat);
+            etaBox.castShadow = true;
+            etaGroup.add(etaBox);
+
+            const etaRim = new THREE.Mesh(new THREE.BoxGeometry(1.59, 0.60, 0.09), cyanLedMat);
+            etaGroup.add(etaRim);
+
+            // Real-time Dynamic CanvasTexture for ETA Screen
+            etaCanvas = document.createElement('canvas');
+            etaCanvas.width = 768;
+            etaCanvas.height = 280;
+            etaCtx = etaCanvas.getContext('2d');
+            etaTexture = new THREE.CanvasTexture(etaCanvas);
+            updateEtaScreenTexture();
+
+            const etaMat = new THREE.MeshBasicMaterial({ map: etaTexture });
+            const etaFront = new THREE.Mesh(new THREE.PlaneGeometry(1.48, 0.50), etaMat);
+            etaFront.position.z = 0.075;
+            etaFront.userData = { interactive: true, tab: 'eta', preset: 'eta', name: 'จอบอกเวลารถเมล์เข้าป้าย' };
+            interactiveMeshes.push(etaFront);
+            etaGroup.add(etaFront);
+
+            const etaBack = new THREE.Mesh(new THREE.PlaneGeometry(1.48, 0.50), etaMat);
+            etaBack.rotation.y = Math.PI;
+            etaBack.position.z = -0.075;
+            etaGroup.add(etaBack);
+
+            // --- G. VERTICAL DIGITAL KIOSK (ตู้จอประชาสัมพันธ์ข่าวสารและแผนที่เส้นทาง - ด้านขวา) ---
+            const kioskGroup = new THREE.Group();
+            kioskGroup.position.set(4.15, 0, 0.65);
+            kioskGroup.rotation.y = -0.18; // Angled slightly toward approaching passengers
+            shelterGroup.add(kioskGroup);
+
+            // Pedestal Base
+            const kBase = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.12, 0.42), darkSteelMat);
+            kBase.position.y = 0.06;
+            kBase.castShadow = true;
+            kioskGroup.add(kBase);
+
+            // Sleek Vertical Monolith Body
+            const kBody = new THREE.Mesh(new THREE.BoxGeometry(0.84, 2.35, 0.22), darkSteelMat);
+            kBody.position.y = 1.25;
+            kBody.castShadow = true;
+            kioskGroup.add(kBody);
+
+            // Glowing Cyan Side Strips
+            [-0.43, 0.43].forEach(sx => {
+                const kSideLed = new THREE.Mesh(new THREE.BoxGeometry(0.025, 2.25, 0.06), cyanLedMat);
+                kSideLed.position.set(sx, 1.25, 0.04);
+                kioskGroup.add(kSideLed);
+            });
+
+            // Dynamic Kiosk Screen Texture
+            kioskCanvas = document.createElement('canvas');
+            kioskCanvas.width = 512;
+            kioskCanvas.height = 1024;
+            kioskCtx = kioskCanvas.getContext('2d');
+            kioskTexture = new THREE.CanvasTexture(kioskCanvas);
+            updateKioskScreenTexture();
+
+            const kioskMat = new THREE.MeshBasicMaterial({ map: kioskTexture });
+            const kioskScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.74, 1.62), kioskMat);
+            kioskScreen.position.set(0, 1.38, 0.115);
+            kioskScreen.userData = { interactive: true, tab: 'map', preset: 'kiosk', name: 'ตู้จอประชาสัมพันธ์ข่าวสาร & แผนที่' };
+            interactiveMeshes.push(kioskScreen);
+            kioskGroup.add(kioskScreen);
+
+            // --- H. SMART IOT DEVICES: 2x CCTV CAMERAS & 2x USB CHARGING PORTS ---
+            // 1. Two CCTV Cameras (Left & Right under front roof corners)
+            [-4.15, 4.15].forEach((cx, idx) => {
+                const cctvGroup = new THREE.Group();
+                cctvGroup.position.set(cx, 3.05, 1.35);
+                shelterGroup.add(cctvGroup);
+
+                // Mount arm
+                const arm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.06), darkSteelMat);
+                arm.position.y = 0.08;
+                cctvGroup.add(arm);
+
+                // Dome / Bullet Camera Housing
+                const camBody = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.24, 16), brushedMetalMat);
+                camBody.rotation.x = Math.PI / 2.5;
+                camBody.rotation.z = idx === 0 ? -0.35 : 0.35;
+                cctvGroup.add(camBody);
+
+                // Camera Lens
+                const lens = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.05, 0.05, 0.04, 16),
+                    new THREE.MeshBasicMaterial({ color: '#020617' })
+                );
+                lens.rotation.x = Math.PI / 2.5;
+                lens.position.set(idx === 0 ? 0.03 : -0.03, -0.05, 0.11);
+                cctvGroup.add(lens);
+
+                // Blinking Status LED
+                const statusLed = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.018, 8, 8),
+                    new THREE.MeshBasicMaterial({ color: '#EF4444' })
+                );
+                statusLed.position.set(idx === 0 ? 0.05 : -0.05, -0.02, 0.12);
+                cctvGroup.add(statusLed);
+                cctvLeds.push(statusLed);
+            });
+
+            // 2. Two USB Charging Stations (Left & Right Front Pillars)
+            [-4.15, 3.52].forEach((ux, idx) => {
+                const usbGroup = new THREE.Group();
+                usbGroup.position.set(ux, 1.12, 0.57);
+                shelterGroup.add(usbGroup);
+
+                // Charging Module Box
+                const usbBox = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.26, 0.05), darkSteelMat);
+                usbBox.userData = { interactive: true, tab: 'iot', preset: idx === 0 ? 'usb1' : 'usb2', name: `ช่องชาร์จ USB ${idx + 1}` };
+                interactiveMeshes.push(usbBox);
+                usbGroup.add(usbBox);
+
+                // Glowing Cyan Ring around USB Ports
+                const ringGeo = new THREE.RingGeometry(0.042, 0.058, 24);
+                const ringMat = new THREE.MeshBasicMaterial({ color: '#38BDF8', side: THREE.DoubleSide });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.position.set(0, 0.03, 0.028);
+                usbGroup.add(ring);
+                usbRings.push(ring);
+
+                // Dual USB Port Slots
+                [-0.022, 0.022].forEach(slotX => {
+                    const slot = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.022, 0.012, 0.01),
+                        new THREE.MeshBasicMaterial({ color: '#0F172A' })
+                    );
+                    slot.position.set(slotX, 0.03, 0.029);
+                    usbGroup.add(slot);
+                });
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 5. MRT LAK SONG (BL38) CONNECTION WALKWAY & THE MALL BANGKAE FACADE
+         * ============================================================================
+         */
+        function buildMRTConnectionWalkway() {
+            const mrtGroup = new THREE.Group();
+            mrtGroup.position.set(-7.5, 0.24, -1.5);
+            scene.add(mrtGroup);
+
+            const concreteMat = new THREE.MeshStandardMaterial({ color: '#1E293B', roughness: 0.6, metalness: 0.2 });
+            const navyMrtMat = new THREE.MeshStandardMaterial({ color: '#1D4ED8', roughness: 0.3, metalness: 0.5 });
+            const cyanGlowMat = new THREE.MeshStandardMaterial({ color: '#38BDF8', emissive: '#38BDF8', emissiveIntensity: 1.6 });
+
+            // Elevated Skywalk Support Pillars
+            [-2.5, 1.5].forEach(px => {
+                const pier = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.52, 5.5, 16), concreteMat);
+                pier.position.set(px, 2.75, -1.5);
+                pier.castShadow = true;
+                mrtGroup.add(pier);
+            });
+
+            // Elevated Skywalk Deck (MRT Lak Song Exit 2 Skywalk)
+            const deck = new THREE.Mesh(new THREE.BoxGeometry(10, 0.55, 3.2), concreteMat);
+            deck.position.set(-1.5, 5.4, -1.5);
+            mrtGroup.add(deck);
+
+            const deckLed = new THREE.Mesh(new THREE.BoxGeometry(10, 0.06, 0.06), cyanGlowMat);
+            deckLed.position.set(-1.5, 5.15, 0.12);
+            mrtGroup.add(deckLed);
+
+            // Covered Escalator / Stairwell Linking Shelter to MRT Lak Song
+            const stairTunnel = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3.4, 1.8), concreteMat);
+            stairTunnel.position.set(0.8, 1.7, -0.8);
+            mrtGroup.add(stairTunnel);
+
+            // MRT Lak Song Signpost
+            const signCanvas = document.createElement('canvas');
+            signCanvas.width = 512;
+            signCanvas.height = 256;
+            const sCtx = signCanvas.getContext('2d');
+            sCtx.fillStyle = '#0F172A';
+            sCtx.fillRect(0, 0, 512, 256);
+            sCtx.strokeStyle = '#38BDF8';
+            sCtx.lineWidth = 8;
+            sCtx.strokeRect(8, 8, 496, 240);
+
+            // Blue Line Badge BL38
+            sCtx.fillStyle = '#1D4ED8';
+            sCtx.beginPath();
+            sCtx.roundRect(28, 42, 110, 72, 14);
+            sCtx.fill();
+            sCtx.fillStyle = '#FFFFFF';
+            sCtx.font = 'bold 34px Inter, sans-serif';
+            sCtx.fillText('BL38', 42, 90);
+
+            sCtx.fillStyle = '#38BDF8';
+            sCtx.font = 'bold 30px "Noto Sans Thai", sans-serif';
+            sCtx.fillText('ทางเชื่อม MRT หลักสอง', 160, 82);
+            sCtx.fillStyle = '#E2E8F0';
+            sCtx.font = '24px "Noto Sans Thai", sans-serif';
+            sCtx.fillText('MRT Lak Song • ทางออก 2', 160, 122);
+            sCtx.fillStyle = '#34D399';
+            sCtx.font = 'bold 24px "Noto Sans Thai", sans-serif';
+            sCtx.fillText('← เดินเชื่อมเข้าห้าง & สถานี 30 ม.', 40, 195);
+
+            const signTex = new THREE.CanvasTexture(signCanvas);
+            const signBoard = new THREE.Mesh(
+                new THREE.BoxGeometry(2.4, 1.2, 0.14),
+                new THREE.MeshBasicMaterial({ map: signTex })
+            );
+            signBoard.position.set(1.4, 2.85, 0.35);
+            signBoard.rotation.y = 0.25;
+            mrtGroup.add(signBoard);
+
+            // Stylized Background Facade of "The Mall Lifestore Bangkae"
+            const mallBuilding = new THREE.Mesh(
+                new THREE.BoxGeometry(26, 12, 4),
+                new THREE.MeshStandardMaterial({ color: '#0F172A', roughness: 0.4, metalness: 0.6 })
+            );
+            mallBuilding.position.set(8.5, 6.0, -6.5);
+            mrtGroup.add(mallBuilding);
+
+            // Illuminated Mall Facade Ribbons
+            [3.5, 6.5, 9.5].forEach(ry => {
+                const ribbon = new THREE.Mesh(
+                    new THREE.BoxGeometry(25.5, 0.12, 0.15),
+                    navyMrtMat
+                );
+                ribbon.position.set(8.5, ry, -4.45);
+                mrtGroup.add(ribbon);
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 6. AMBIENT NIGHT CITY PARTICLES & PASSING SMART EV BUSES
+         * ============================================================================
+         */
+        function buildBackgroundCityAndTraffic() {
+            // Floating ambient cyber dust / city bokeh particles
+            const particleCount = 180;
+            const pGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 35;
+                positions[i * 3 + 1] = Math.random() * 8 + 0.5;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 25;
+            }
+            pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const pMat = new THREE.PointsMaterial({
+                color: '#38BDF8',
+                size: 0.08,
+                transparent: true,
+                opacity: 0.55
+            });
+            const particles = new THREE.Points(pGeo, pMat);
+            scene.add(particles);
+
+            // Create 2 Stylized Passing EV Buses on Phetkasem Road (in distance lanes)
+            [8.2, 13.5].forEach((laneZ, idx) => {
+                const busGroup = new THREE.Group();
+                busGroup.position.set(idx === 0 ? -35 : 35, 0.02, laneZ);
+
+                const body = new THREE.Mesh(
+                    new THREE.BoxGeometry(8.5, 2.6, 2.2),
+                    new THREE.MeshStandardMaterial({ color: idx === 0 ? '#0284C7' : '#1E3A8A', roughness: 0.3, metalness: 0.6 })
+                );
+                body.position.y = 1.5;
+                busGroup.add(body);
+
+                // Glowing bus windows
+                const win = new THREE.Mesh(
+                    new THREE.BoxGeometry(7.6, 0.95, 2.24),
+                    new THREE.MeshBasicMaterial({ color: '#BAE6FD' })
+                );
+                win.position.y = 1.85;
+                busGroup.add(win);
+
+                // Headlights
+                const headLight = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.1, 0.25, 1.8),
+                    new THREE.MeshBasicMaterial({ color: '#FEF08A' })
+                );
+                headLight.position.set(idx === 0 ? 4.26 : -4.26, 0.85, 0);
+                busGroup.add(headLight);
+
+                // Taillights
+                const tailLight = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.1, 0.25, 1.8),
+                    new THREE.MeshBasicMaterial({ color: '#EF4444' })
+                );
+                tailLight.position.set(idx === 0 ? -4.26 : 4.26, 0.85, 0);
+                busGroup.add(tailLight);
+
+                scene.add(busGroup);
+                movingBuses.push({
+                    mesh: busGroup,
+                    speed: idx === 0 ? 0.095 : -0.075,
+                    limit: 42
+                });
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 7. HIGH-RES CANVAS TEXTURES FOR 3D SCREENS (REAL-TIME UPDATING)
+         * ============================================================================
+         */
+        function createStationHeaderTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 2048;
+            canvas.height = 180;
+            const ctx = canvas.getContext('2d');
+
+            // Deep Navy Gradient
+            const grad = ctx.createLinearGradient(0, 0, 2048, 0);
+            grad.addColorStop(0, '#09152B');
+            grad.addColorStop(0.5, '#0F2952');
+            grad.addColorStop(1, '#09152B');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 2048, 180);
+
+            // Left Bus Icon Badge
+            ctx.fillStyle = '#0284C7';
+            ctx.beginPath();
+            ctx.roundRect(36, 26, 128, 128, 22);
+            ctx.fill();
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 68px Inter, sans-serif';
+            ctx.fillText('🚌', 58, 114);
+
+            // Thai Station Title
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 64px "Noto Sans Thai", sans-serif';
+            ctx.fillText('เดอะมอลล์ ไลฟ์สโตร์ บางแค', 200, 92);
+
+            // English Subtitle
+            ctx.fillStyle = '#7DD3FC';
+            ctx.font = '600 34px Inter, sans-serif';
+            ctx.fillText('The Mall Lifestore Bangkae  •  Stop ID: THB-BK-001', 202, 144);
+
+            // Right BUS TIME & MRT Badge
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.16)';
+            ctx.strokeStyle = '#38BDF8';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.roundRect(1480, 28, 530, 124, 20);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#38BDF8';
+            ctx.font = 'bold 42px Inter, sans-serif';
+            ctx.fillText('BUS TIME', 1520, 84);
+
+            ctx.fillStyle = '#E2E8F0';
+            ctx.font = 'bold 30px "Noto Sans Thai", sans-serif';
+            ctx.fillText('เชื่อมต่อ MRT หลักสอง (BL38)', 1520, 130);
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createRouteDirectoryTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 768;
+            canvas.height = 768;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#0B1324';
+            ctx.fillRect(0, 0, 768, 768);
+
+            // Header bar
+            ctx.fillStyle = '#0284C7';
+            ctx.fillRect(0, 0, 768, 92);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 36px "Noto Sans Thai", sans-serif';
+            ctx.fillText('ป้ายบอกสายรถเมล์ที่ผ่านจุดจอดนี้', 32, 58);
+
+            // List first 9 routes cleanly
+            directoryRoutes.slice(0, 9).forEach((r, idx) => {
+                const y = 122 + idx * 68;
+                ctx.fillStyle = idx % 2 === 0 ? 'rgba(30, 41, 59, 0.65)' : 'rgba(15, 23, 42, 0.65)';
+                ctx.beginPath();
+                ctx.roundRect(24, y - 34, 720, 56, 10);
+                ctx.fill();
+
+                // Route Number Pill
+                ctx.fillStyle = '#38BDF8';
+                ctx.beginPath();
+                ctx.roundRect(36, y - 24, 96, 38, 8);
+                ctx.fill();
+
+                ctx.fillStyle = '#07090E';
+                ctx.font = 'bold 26px Inter, sans-serif';
+                ctx.fillText(r.line, 56, y + 4);
+
+                // Route Name
+                ctx.fillStyle = '#F8FAFC';
+                ctx.font = '500 24px "Noto Sans Thai", sans-serif';
+                ctx.fillText(r.name, 152, y + 3);
+            });
+
+            ctx.fillStyle = '#38BDF8';
+            ctx.font = '22px "Noto Sans Thai", sans-serif';
+            ctx.fillText('แตะเพื่อดูสายรถเมล์ทั้งหมด 13 สายบนหน้าจอ Kiosk →', 135, 745);
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function updateEtaScreenTexture() {
+            if (!etaCtx) return;
+            const w = etaCanvas.width;
+            const h = etaCanvas.height;
+
+            etaCtx.fillStyle = '#050A14';
+            etaCtx.fillRect(0, 0, w, h);
+
+            // Top Banner
+            etaCtx.fillStyle = '#0C2D57';
+            etaCtx.fillRect(0, 0, w, 54);
+
+            etaCtx.fillStyle = '#38BDF8';
+            etaCtx.font = 'bold 28px Inter, sans-serif';
+            etaCtx.fillText('● BUS TIME LIVE', 22, 37);
+
+            etaCtx.fillStyle = '#E2E8F0';
+            etaCtx.font = 'bold 24px "Noto Sans Thai", sans-serif';
+            etaCtx.fillText('เวลารถโดยสารเข้าป้าย', 495, 36);
+
+            // Top 3 Incoming Buses
+            liveBusData.slice(0, 3).forEach((bus, idx) => {
+                const rowY = 72 + idx * 68;
+                etaCtx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+                etaCtx.beginPath();
+                etaCtx.roundRect(16, rowY, w - 32, 56, 10);
+                etaCtx.fill();
+
+                // Bus Line Badge
+                etaCtx.fillStyle = bus.color;
+                etaCtx.beginPath();
+                etaCtx.roundRect(26, rowY + 8, 92, 40, 8);
+                etaCtx.fill();
+
+                etaCtx.fillStyle = '#07090E';
+                etaCtx.font = 'bold 28px Inter, sans-serif';
+                etaCtx.fillText(bus.line, 46, rowY + 38);
+
+                // Destination
+                etaCtx.fillStyle = '#F8FAFC';
+                etaCtx.font = '500 24px "Noto Sans Thai", sans-serif';
+                const shortDest = bus.dest.length > 24 ? bus.dest.slice(0, 24) + '...' : bus.dest;
+                etaCtx.fillText(shortDest, 134, rowY + 36);
+
+                // ETA Status
+                const mins = Math.ceil(bus.etaSec / 60);
+                const statusText = bus.etaSec <= 45 ? 'กำลังเข้าป้าย' : `อีก ${mins} นาที`;
+                etaCtx.fillStyle = bus.etaSec <= 45 ? '#34D399' : '#38BDF8';
+                etaCtx.font = 'bold 26px "Noto Sans Thai", sans-serif';
+                etaCtx.fillText(statusText, 575, rowY + 36);
+            });
+
+            etaTexture.needsUpdate = true;
+        }
+
+        function updateKioskScreenTexture() {
+            if (!kioskCtx) return;
+            const w = kioskCanvas.width;
+            const h = kioskCanvas.height;
+
+            // Background
+            const bgGrad = kioskCtx.createLinearGradient(0, 0, 0, h);
+            bgGrad.addColorStop(0, '#091428');
+            bgGrad.addColorStop(1, '#050811');
+            kioskCtx.fillStyle = bgGrad;
+            kioskCtx.fillRect(0, 0, w, h);
+
+            // Top Header
+            kioskCtx.fillStyle = '#0284C7';
+            kioskCtx.fillRect(0, 0, w, 110);
+            kioskCtx.fillStyle = '#FFFFFF';
+            kioskCtx.font = 'bold 34px "Noto Sans Thai", sans-serif';
+            kioskCtx.fillText('SMART KIOSK • บางแค', 32, 52);
+            kioskCtx.fillStyle = '#BAE6FD';
+            kioskCtx.font = '22px "Noto Sans Thai", sans-serif';
+            kioskCtx.fillText('แผนที่เส้นทางฝั่งธนบุรี & BUS TIME', 32, 88);
+
+            // Stylized Thonburi Route Map Graphic on Kiosk
+            kioskCtx.fillStyle = '#0F172A';
+            kioskCtx.strokeStyle = '#1E293B';
+            kioskCtx.lineWidth = 3;
+            kioskCtx.beginPath();
+            kioskCtx.roundRect(28, 135, w - 56, 420, 18);
+            kioskCtx.fill();
+            kioskCtx.stroke();
+
+            // Chao Phraya River curve
+            kioskCtx.strokeStyle = '#0369A1';
+            kioskCtx.lineWidth = 22;
+            kioskCtx.beginPath();
+            kioskCtx.moveTo(390, 145);
+            kioskCtx.bezierCurveTo(360, 280, 430, 410, 380, 545);
+            kioskCtx.stroke();
+
+            // Phetkasem Road + MRT Blue Line
+            kioskCtx.strokeStyle = '#38BDF8';
+            kioskCtx.lineWidth = 8;
+            kioskCtx.beginPath();
+            kioskCtx.moveTo(55, 360);
+            kioskCtx.lineTo(445, 310);
+            kioskCtx.stroke();
+
+            // Current Hub Pulse Circle (The Mall Bangkae)
+            kioskCtx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+            kioskCtx.beginPath();
+            kioskCtx.arc(170, 345, 34, 0, Math.PI * 2);
+            kioskCtx.fill();
+
+            kioskCtx.fillStyle = '#38BDF8';
+            kioskCtx.beginPath();
+            kioskCtx.arc(170, 345, 12, 0, Math.PI * 2);
+            kioskCtx.fill();
+
+            kioskCtx.fillStyle = '#FFFFFF';
+            kioskCtx.font = 'bold 22px "Noto Sans Thai", sans-serif';
+            kioskCtx.fillText('📍 เดอะมอลล์ บางแค / MRT หลักสอง', 52, 292);
+
+            // Live ETA Summary Cards at bottom of Kiosk
+            kioskCtx.fillStyle = '#38BDF8';
+            kioskCtx.font = 'bold 26px "Noto Sans Thai", sans-serif';
+            kioskCtx.fillText('รถเมล์ใกล้ถึงป้าย (Real-Time)', 32, 605);
+
+            liveBusData.slice(0, 3).forEach((b, i) => {
+                const cy = 628 + i * 95;
+                kioskCtx.fillStyle = '#1E293B';
+                kioskCtx.beginPath();
+                kioskCtx.roundRect(28, cy, w - 56, 80, 14);
+                kioskCtx.fill();
+
+                kioskCtx.fillStyle = b.color;
+                kioskCtx.beginPath();
+                kioskCtx.roundRect(42, cy + 16, 84, 48, 10);
+                kioskCtx.fill();
+
+                kioskCtx.fillStyle = '#07090E';
+                kioskCtx.font = 'bold 28px Inter, sans-serif';
+                kioskCtx.fillText(b.line, 62, cy + 50);
+
+                const mins = Math.ceil(b.etaSec / 60);
+                kioskCtx.fillStyle = '#F8FAFC';
+                kioskCtx.font = 'bold 24px "Noto Sans Thai", sans-serif';
+                kioskCtx.fillText(b.etaSec <= 45 ? 'กำลังเข้าป้าย!' : `อีก ${mins} นาที`, 148, cy + 48);
+            });
+
+            // Touch Prompt Footer
+            kioskCtx.fillStyle = '#0284C7';
+            kioskCtx.beginPath();
+            kioskCtx.roundRect(28, 930, w - 56, 62, 14);
+            kioskCtx.fill();
+            kioskCtx.fillStyle = '#FFFFFF';
+            kioskCtx.font = 'bold 24px "Noto Sans Thai", sans-serif';
+            kioskCtx.fillText('👆 คลิกที่หน้าจอเพื่อใช้งาน Kiosk จำลอง', 68, 969);
+
+            kioskTexture.needsUpdate = true;
+        }
+
+        /**
+         * ============================================================================
+         * 7B. IN-HAND SMARTPHONE LIVE "BUS TIME" MOBILE WEB SCREEN TEXTURE
+         * ============================================================================
+         */
+        function initSmartphoneWebTexture() {
+            phoneCanvas = document.createElement('canvas');
+            phoneCanvas.width = 256;
+            phoneCanvas.height = 512;
+            phoneCtx = phoneCanvas.getContext('2d');
+            phoneTexture = new THREE.CanvasTexture(phoneCanvas);
+            phoneTexture.minFilter = THREE.LinearFilter;
+            phoneTexture.magFilter = THREE.LinearFilter;
+            updateSmartphoneWebTexture(0);
+        }
+
+        function updateSmartphoneWebTexture(elapsed) {
+            if (!phoneCtx) return;
+            const w = phoneCanvas.width;
+            const h = phoneCanvas.height;
+
+            // Dark-Blue Cyber Mobile UI Background
+            phoneCtx.fillStyle = '#060B16';
+            phoneCtx.fillRect(0, 0, w, h);
+
+            // Status bar
+            phoneCtx.fillStyle = '#0F172A';
+            phoneCtx.fillRect(0, 0, w, 24);
+            phoneCtx.fillStyle = '#94A3B8';
+            phoneCtx.font = 'bold 11px Inter, sans-serif';
+            phoneCtx.fillText('19:37  5G', 14, 16);
+            phoneCtx.fillStyle = '#34D399';
+            phoneCtx.fillText('🔋 92%', 196, 16);
+
+            // BUS TIME Mobile App Header
+            const hdrGrad = phoneCtx.createLinearGradient(0, 24, w, 74);
+            hdrGrad.addColorStop(0, '#0284C7');
+            hdrGrad.addColorStop(1, '#1D4ED8');
+            phoneCtx.fillStyle = hdrGrad;
+            phoneCtx.fillRect(0, 24, w, 52);
+
+            phoneCtx.fillStyle = '#FFFFFF';
+            phoneCtx.font = 'bold 18px Inter, sans-serif';
+            phoneCtx.fillText('🚌 BUS TIME', 14, 48);
+            phoneCtx.fillStyle = '#BAE6FD';
+            phoneCtx.font = '11px "Noto Sans Thai", sans-serif';
+            phoneCtx.fillText('เดอะมอลล์ ไลฟ์สโตร์ บางแค', 14, 66);
+
+            // Live Mini Map Widget (Thonburi Corridor)
+            phoneCtx.fillStyle = '#0B1324';
+            phoneCtx.strokeStyle = '#1E3A8A';
+            phoneCtx.lineWidth = 2;
+            phoneCtx.beginPath();
+            phoneCtx.roundRect(12, 86, w - 24, 132, 12);
+            phoneCtx.fill();
+            phoneCtx.stroke();
+
+            // Route line on phone map
+            phoneCtx.strokeStyle = '#38BDF8';
+            phoneCtx.lineWidth = 4;
+            phoneCtx.beginPath();
+            phoneCtx.moveTo(26, 168);
+            phoneCtx.lineTo(226, 134);
+            phoneCtx.stroke();
+
+            // Animated moving bus dot approaching station on phone map
+            const busProgress = ((elapsed * 0.18) % 1);
+            const bx = 26 + busProgress * 115;
+            const by = 168 - busProgress * 20;
+            phoneCtx.fillStyle = '#34D399';
+            phoneCtx.beginPath();
+            phoneCtx.arc(bx, by, 6, 0, Math.PI * 2);
+            phoneCtx.fill();
+
+            // User Stop Pin (The Mall Bangkae)
+            phoneCtx.fillStyle = 'rgba(56, 189, 248, 0.28)';
+            phoneCtx.beginPath();
+            phoneCtx.arc(148, 148, 14, 0, Math.PI * 2);
+            phoneCtx.fill();
+            phoneCtx.fillStyle = '#38BDF8';
+            phoneCtx.beginPath();
+            phoneCtx.arc(148, 148, 6, 0, Math.PI * 2);
+            phoneCtx.fill();
+
+            phoneCtx.fillStyle = '#E2E8F0';
+            phoneCtx.font = 'bold 11px "Noto Sans Thai", sans-serif';
+            phoneCtx.fillText('📍 ป้ายหน้าเดอะมอลล์บางแค', 22, 110);
+            phoneCtx.fillStyle = '#34D399';
+            phoneCtx.font = '10px "Noto Sans Thai", sans-serif';
+            phoneCtx.fillText('● GPS รถเมล์กำลังเคลื่อนที่...', 22, 206);
+
+            // Simulated Finger Scroll Offset on ETA Cards
+            const scrollY = Math.sin(elapsed * 1.4) * 14;
+            phoneCtx.save();
+            phoneCtx.beginPath();
+            phoneCtx.rect(10, 228, w - 20, 236);
+            phoneCtx.clip();
+
+            phoneCtx.fillStyle = '#38BDF8';
+            phoneCtx.font = 'bold 12px "Noto Sans Thai", sans-serif';
+            phoneCtx.fillText('รถเมล์ใกล้เข้าป้าย (Real-Time)', 14, 244 + scrollY);
+
+            liveBusData.slice(0, 4).forEach((b, idx) => {
+                const cy = 254 + idx * 54 + scrollY;
+                phoneCtx.fillStyle = '#0F172A';
+                phoneCtx.strokeStyle = b.etaSec <= 45 ? '#34D399' : '#1E293B';
+                phoneCtx.lineWidth = 1.5;
+                phoneCtx.beginPath();
+                phoneCtx.roundRect(14, cy, w - 28, 46, 9);
+                phoneCtx.fill();
+                phoneCtx.stroke();
+
+                // Line Pill
+                phoneCtx.fillStyle = b.color;
+                phoneCtx.beginPath();
+                phoneCtx.roundRect(20, cy + 8, 42, 30, 6);
+                phoneCtx.fill();
+
+                phoneCtx.fillStyle = '#07090E';
+                phoneCtx.font = 'bold 15px Inter, sans-serif';
+                phoneCtx.fillText(b.line, 30, cy + 28);
+
+                // ETA Text
+                const mins = Math.ceil(b.etaSec / 60);
+                const arriving = b.etaSec <= 45 || heroBusState.phase === 'APPROACHING' || heroBusState.phase === 'DOCKED';
+                phoneCtx.fillStyle = arriving ? '#34D399' : '#38BDF8';
+                phoneCtx.font = 'bold 13px "Noto Sans Thai", sans-serif';
+                phoneCtx.fillText(arriving && idx === 0 ? 'กำลังเข้าป้าย!' : `อีก ${mins} นาที`, 72, cy + 22);
+
+                phoneCtx.fillStyle = '#94A3B8';
+                phoneCtx.font = '10px "Noto Sans Thai", sans-serif';
+                phoneCtx.fillText(b.type, 72, cy + 37);
+            });
+            phoneCtx.restore();
+
+            // Bottom Mobile Tab Bar
+            phoneCtx.fillStyle = '#0B1120';
+            phoneCtx.fillRect(0, 468, w, 44);
+            phoneCtx.fillStyle = '#38BDF8';
+            phoneCtx.font = 'bold 11px "Noto Sans Thai", sans-serif';
+            phoneCtx.fillText('⏱️ เวลาเข้าป้าย   🗺️ แผนที่   🚇 MRT', 24, 493);
+
+            phoneTexture.needsUpdate = true;
+        }
+
+        /**
+         * ============================================================================
+         * 7C. HIGH-DENSITY SKELETAL NPC CROWD SYSTEM (5 / 12 / 20 PASSENGERS)
+         *     & IN-HAND SMARTPHONE BUS TIME WEB VIEWER
+         * ============================================================================
+         */
+        const npcProfiles = [
+            // 1-2: Kiosk Users (standing & tapping BUS TIME Kiosk)
+            { name: 'คุณแพรว (ดูตู้ Kiosk)', role: 'kiosk', hasPhone: false, slotX: 3.92, slotZ: 0.72, facing: 2.95, shirt: '#38BDF8', pants: '#1E293B', hair: '#1C1917', skin: '#F1C27D', hScale: 0.96 },
+            { name: 'คุณต้น (ต่อคิว Kiosk)', role: 'kiosk', hasPhone: true,  slotX: 4.55, slotZ: 1.05, facing: 2.75, shirt: '#F8FAFC', pants: '#334155', hair: '#0F172A', skin: '#E0AC69', hScale: 1.02 },
+
+            // 3-6: Seated Passengers on Stainless/Wood Bench (2 with smartphones!)
+            { name: 'น้องมิ้นท์ (นั่งดูเว็บ BUS TIME)', role: 'seated', hasPhone: true,  seatX: -1.95, shirt: '#F472B6', pants: '#1E3A8A', hair: '#292524', skin: '#FFDBAC', hScale: 0.94 },
+            { name: 'คุณลุงสมชาย (นั่งรอรถเมล์)',     role: 'seated', hasPhone: false, seatX: -1.15, shirt: '#CBD5E1', pants: '#334155', hair: '#94A3B8', skin: '#C68642', hScale: 0.98 },
+            { name: 'คุณบอส (นั่งเช็กสาย 84 บนมือถือ)', role: 'seated', hasPhone: true,  seatX: -0.25, shirt: '#0EA5E9', pants: '#0F172A', hair: '#18181B', skin: '#E0AC69', hScale: 1.01 },
+            { name: 'คุณนภา (นั่งพักคอย)',            role: 'seated', hasPhone: false, seatX:  1.35, shirt: '#A78BFA', pants: '#1E293B', hair: '#3F2E21', skin: '#F1C27D', hScale: 0.95 },
+
+            // 7-12: Waiting & Looking Crowd (including Smartphone BUS TIME Users)
+            { name: 'คุณเจมส์ (เปิดเว็บ BUS TIME บนมือถือ)', role: 'waitPhone', hasPhone: true,  slotX: -2.85, slotZ: 0.95, facing: 0.15, shirt: '#22D3EE', pants: '#0F172A', hair: '#09090B', skin: '#E0AC69', hScale: 1.03 },
+            { name: 'คุณเมย์ (เช็กเวลารถเข้าป้ายผ่านมือถือ)',  role: 'waitPhone', hasPhone: true,  slotX:  2.55, slotZ: 0.92, facing: -0.2, shirt: '#FB7185', pants: '#1E293B', hair: '#27272A', skin: '#FFDBAC', hScale: 0.95 },
+            { name: 'คุณเอก (ชะเง้อมองรถเมล์สาย 80)',       role: 'waiting',   hasPhone: false, slotX: -3.45, slotZ: 1.15, facing: -0.45, shirt: '#34D399', pants: '#1E293B', hair: '#18181B', skin: '#C68642', hScale: 1.04 },
+            { name: 'คุณปริม (ยืนรอ & คุยกับเพื่อน)',        role: 'waiting',   hasPhone: false, slotX:  0.45, slotZ: 0.88, facing: -0.65, shirt: '#FBBF24', pants: '#334155', hair: '#3F2E21', skin: '#F1C27D', hScale: 0.96 },
+            { name: 'คุณวิน (ยืนรอ & คุยกับเพื่อน)',         role: 'waiting',   hasPhone: false, slotX: -0.15, slotZ: 0.92, facing:  0.65, shirt: '#60A5FA', pants: '#0F172A', hair: '#09090B', skin: '#E0AC69', hScale: 1.00 },
+            { name: 'คุณกิ๊ฟ (เปิดเว็บ BUS TIME บนมือถือ)',   role: 'waitPhone', hasPhone: true,  slotX:  1.45, slotZ: 1.18, facing:  0.10, shirt: '#C084FC', pants: '#1E293B', hair: '#1C1917', skin: '#FFDBAC', hScale: 0.97 },
+
+            // 13-20: Commuters Walking In & Out from The Mall Bangkae & MRT Lak Song
+            { name: 'ผู้โดยสาร #13 (เดินมาจาก MRT หลักสอง)', role: 'commuter', hasPhone: false, dir:  1, laneZ: 1.58, startX: -12.5, shirt: '#38BDF8', pants: '#0F172A', hair: '#18181B', skin: '#E0AC69', hScale: 1.00 },
+            { name: 'ผู้โดยสาร #14 (เดินเข้าป้ายจากเดอะมอลล์)', role: 'commuter', hasPhone: true,  dir: -1, laneZ: 1.32, startX:  11.5, shirt: '#F43F5E', pants: '#1E293B', hair: '#27272A', skin: '#FFDBAC', hScale: 0.95 },
+            { name: 'ผู้โดยสาร #15 (เดินไปทางเชื่อม MRT)',     role: 'commuter', hasPhone: false, dir: -1, laneZ: 1.68, startX:   7.5, shirt: '#10B981', pants: '#334155', hair: '#09090B', skin: '#C68642', hScale: 1.02 },
+            { name: 'ผู้โดยสาร #16 (เดินเข้าป้ายจาก MRT)',     role: 'commuter', hasPhone: false, dir:  1, laneZ: 1.28, startX:  -8.0, shirt: '#F59E0B', pants: '#1E293B', hair: '#3F2E21', skin: '#F1C27D', hScale: 0.97 },
+            { name: 'ผู้โดยสาร #17 (เดินดูมือถือ BUS TIME)',   role: 'commuter', hasPhone: true,  dir:  1, laneZ: 1.72, startX: -16.0, shirt: '#818CF8', pants: '#0F172A', hair: '#18181B', skin: '#E0AC69', hScale: 1.01 },
+            { name: 'ผู้โดยสาร #18 (เดินออกจากป้าย)',         role: 'commuter', hasPhone: false, dir: -1, laneZ: 1.48, startX:  15.5, shirt: '#2DD4BF', pants: '#1E293B', hair: '#292524', skin: '#FFDBAC', hScale: 0.94 },
+            { name: 'ผู้โดยสาร #19 (เดินเข้าคิวรอรถเมล์)',      role: 'commuter', hasPhone: false, dir:  1, laneZ: 1.42, startX:  -4.8, shirt: '#E879F9', pants: '#334155', hair: '#09090B', skin: '#F1C27D', hScale: 0.98 },
+            { name: 'ผู้โดยสาร #20 (เดินผ่านหน้าเดอะมอลล์)',    role: 'commuter', hasPhone: false, dir: -1, laneZ: 1.82, startX:  18.5, shirt: '#94A3B8', pants: '#0F172A', hair: '#1C1917', skin: '#C68642', hScale: 1.03 }
+        ];
+
+        function createArticulatedNpc(profile, index) {
+            const root = new THREE.Group();
+            const s = profile.hScale || 1.0;
+
+            // Materials
+            const skinMat = new THREE.MeshStandardMaterial({ color: profile.skin, roughness: 0.55, metalness: 0.05 });
+            const shirtMat = new THREE.MeshStandardMaterial({ color: profile.shirt, roughness: 0.72, metalness: 0.05 });
+            const pantsMat = new THREE.MeshStandardMaterial({ color: profile.pants, roughness: 0.78, metalness: 0.05 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: profile.hair, roughness: 0.65, metalness: 0.1 });
+            const shoeMat = new THREE.MeshStandardMaterial({ color: '#0F172A', roughness: 0.4, metalness: 0.2 });
+
+            // Articulated Skeleton Hierarchy (Exact Grounding: sole bottom = y=0 in local space)
+            // Leg total length: thigh (0.42) + shin (0.40) + shoe sole (0.06) = 0.88m
+            const hipY = 0.88 * s;
+
+            const hips = new THREE.Group();
+            hips.name = 'Hips';
+            hips.position.y = hipY;
+            root.add(hips);
+
+            // Pelvis mesh
+            const pelvisMesh = new THREE.Mesh(new THREE.BoxGeometry(0.28 * s, 0.14 * s, 0.18 * s), pantsMat);
+            pelvisMesh.castShadow = true;
+            hips.add(pelvisMesh);
+
+            // Spine / Torso
+            const spine = new THREE.Group();
+            spine.name = 'Spine';
+            spine.position.y = 0.07 * s;
+            hips.add(spine);
+
+            const torsoMesh = new THREE.Mesh(new THREE.BoxGeometry(0.32 * s, 0.44 * s, 0.20 * s), shirtMat);
+            torsoMesh.position.y = 0.22 * s;
+            torsoMesh.castShadow = true;
+            torsoMesh.receiveShadow = true;
+            spine.add(torsoMesh);
+
+            // Neck & Head
+            const neck = new THREE.Group();
+            neck.name = 'Neck';
+            neck.position.y = 0.45 * s;
+            spine.add(neck);
+
+            const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.115 * s, 16, 16), skinMat);
+            headMesh.position.y = 0.13 * s;
+            headMesh.castShadow = true;
+            neck.add(headMesh);
+
+            const hairMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.122 * s, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.58),
+                hairMat
+            );
+            hairMesh.position.y = 0.138 * s;
+            hairMesh.rotation.x = -0.18;
+            neck.add(hairMesh);
+
+            // Left & Right Arms
+            const leftArm = new THREE.Group();
+            leftArm.name = 'LeftArm';
+            leftArm.position.set(0.20 * s, 0.40 * s, 0);
+            spine.add(leftArm);
+
+            const lUpperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.044 * s, 0.038 * s, 0.26 * s, 10), shirtMat);
+            lUpperArm.position.y = -0.13 * s;
+            lUpperArm.castShadow = true;
+            leftArm.add(lUpperArm);
+
+            const leftForeArm = new THREE.Group();
+            leftForeArm.name = 'LeftForeArm';
+            leftForeArm.position.y = -0.26 * s;
+            leftArm.add(leftForeArm);
+
+            const lLowerArm = new THREE.Mesh(new THREE.CylinderGeometry(0.036 * s, 0.030 * s, 0.24 * s, 10), skinMat);
+            lLowerArm.position.y = -0.12 * s;
+            lLowerArm.castShadow = true;
+            leftForeArm.add(lLowerArm);
+
+            const rightArm = new THREE.Group();
+            rightArm.name = 'RightArm';
+            rightArm.position.set(-0.20 * s, 0.40 * s, 0);
+            spine.add(rightArm);
+
+            const rUpperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.044 * s, 0.038 * s, 0.26 * s, 10), shirtMat);
+            rUpperArm.position.y = -0.13 * s;
+            rUpperArm.castShadow = true;
+            rightArm.add(rUpperArm);
+
+            const rightForeArm = new THREE.Group();
+            rightForeArm.name = 'RightForeArm';
+            rightForeArm.position.y = -0.26 * s;
+            rightArm.add(rightForeArm);
+
+            const rLowerArm = new THREE.Mesh(new THREE.CylinderGeometry(0.036 * s, 0.030 * s, 0.24 * s, 10), skinMat);
+            rLowerArm.position.y = -0.12 * s;
+            rLowerArm.castShadow = true;
+            rightForeArm.add(rLowerArm);
+
+            // In-Hand Smartphone with Live BUS TIME Web Screen & Subtle Face Glow
+            let phoneMesh = null;
+            let phoneLight = null;
+            if (profile.hasPhone) {
+                const phoneGroup = new THREE.Group();
+                phoneGroup.position.set(0, -0.23 * s, 0.04 * s);
+                phoneGroup.rotation.x = -Math.PI / 2.2;
+                leftForeArm.add(phoneGroup);
+
+                // Smartphone Chassis
+                const chassis = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.078, 0.155, 0.010),
+                    new THREE.MeshStandardMaterial({ color: '#0F172A', roughness: 0.2, metalness: 0.85 })
+                );
+                phoneGroup.add(chassis);
+
+                // Glowing Live BUS TIME Web Screen
+                const screenMat = new THREE.MeshBasicMaterial({ map: phoneTexture });
+                phoneMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.070, 0.144), screenMat);
+                phoneMesh.position.z = 0.006;
+                phoneGroup.add(phoneMesh);
+
+                // Subtle Cyan Screen Glow illuminating NPC's face & hands
+                phoneLight = new THREE.PointLight('#38BDF8', 0.35, 0.85);
+                phoneLight.position.set(0, 0.02, 0.14);
+                phoneGroup.add(phoneLight);
+            }
+
+            // Left & Right Legs
+            function buildLeg(sideSign, legName, shinName) {
+                const leg = new THREE.Group();
+                leg.name = legName;
+                leg.position.set(sideSign * 0.085 * s, -0.04 * s, 0);
+                hips.add(leg);
+
+                const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.062 * s, 0.050 * s, 0.42 * s, 10), pantsMat);
+                thigh.position.y = -0.21 * s;
+                thigh.castShadow = true;
+                leg.add(thigh);
+
+                const shin = new THREE.Group();
+                shin.name = shinName;
+                shin.position.y = -0.42 * s;
+                leg.add(shin);
+
+                const calf = new THREE.Mesh(new THREE.CylinderGeometry(0.048 * s, 0.038 * s, 0.36 * s, 10), pantsMat);
+                calf.position.y = -0.18 * s;
+                calf.castShadow = true;
+                shin.add(calf);
+
+                // Shoe (sole bottom reaches y = -0.42 * s from knee -> world y = 0.000!)
+                const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.095 * s, 0.06 * s, 0.21 * s), shoeMat);
+                shoe.position.set(0, -0.39 * s, 0.04 * s);
+                shoe.castShadow = true;
+                shin.add(shoe);
+
+                return { leg, shin };
+            }
+
+            buildLeg( 1, 'LeftLeg', 'LeftShin');
+            buildLeg(-1, 'RightLeg', 'RightShin');
+
+            // Invisible Raycast Hitbox for clicking NPC in 3D
+            const hitbox = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.32, 0.32, 1.75 * s, 8),
+                new THREE.MeshBasicMaterial({ visible: false })
+            );
+            hitbox.position.y = 0.88 * s;
+            root.add(hitbox);
+
+            // Setup THREE.AnimationMixer & Procedural Skeletal Animation Clips
+            const mixer = new THREE.AnimationMixer(root);
+            const clips = createNpcAnimationClips(hipY, s);
+            const actions = {
+                walk: mixer.clipAction(clips.walk),
+                idle: mixer.clipAction(clips.idle),
+                phone: mixer.clipAction(clips.phone),
+                seated: mixer.clipAction(clips.seated),
+                seatedPhone: mixer.clipAction(clips.seatedPhone),
+                kiosk: mixer.clipAction(clips.kiosk)
+            };
+
+            const agent = {
+                id: index,
+                profile,
+                root,
+                hips,
+                spine,
+                neck,
+                phoneMesh,
+                phoneLight,
+                hitbox,
+                mixer,
+                actions,
+                activeAction: null,
+                hipY,
+                heightScale: s,
+                state: profile.role, // 'seated' | 'kiosk' | 'waitPhone' | 'waiting' | 'commuter' | 'boarding'
+                vel: new THREE.Vector3(),
+                dir: profile.dir || 1,
+                phaseOffset: index * 1.17,
+                boardSlotIndex: index % 6
+            };
+
+            hitbox.userData = { isNpc: true, agent };
+            npcHitboxes.push(hitbox);
+
+            // Initial Grounded Placement
+            placeNpcAtInitialSlot(agent);
+            scene.add(root);
+            return agent;
+        }
+
+        function createNpcAnimationClips(hipY, s) {
+            // 1. Walk Cycle (1.0s loop)
+            const walkTimes = [0, 0.25, 0.5, 0.75, 1.0];
+            const walkClip = new THREE.AnimationClip('walk', 1.0, [
+                new THREE.NumberKeyframeTrack('Hips.position[y]', walkTimes, [hipY, hipY - 0.025, hipY, hipY - 0.025, hipY]),
+                new THREE.NumberKeyframeTrack('LeftLeg.rotation[x]', walkTimes, [-0.48, 0, 0.48, 0, -0.48]),
+                new THREE.NumberKeyframeTrack('LeftShin.rotation[x]', walkTimes, [0.15, 0.05, 0.25, 0.65, 0.15]),
+                new THREE.NumberKeyframeTrack('RightLeg.rotation[x]', walkTimes, [0.48, 0, -0.48, 0, 0.48]),
+                new THREE.NumberKeyframeTrack('RightShin.rotation[x]', walkTimes, [0.25, 0.65, 0.15, 0.05, 0.25]),
+                new THREE.NumberKeyframeTrack('LeftArm.rotation[x]', walkTimes, [0.38, 0, -0.38, 0, 0.38]),
+                new THREE.NumberKeyframeTrack('RightArm.rotation[x]', walkTimes, [-0.38, 0, 0.38, 0, -0.38]),
+                new THREE.NumberKeyframeTrack('Spine.rotation[y]', walkTimes, [-0.06, 0, 0.06, 0, -0.06])
+            ]);
+
+            // 2. Standing Idle & Looking toward Road (4.0s loop)
+            const idleTimes = [0, 1.0, 2.0, 3.0, 4.0];
+            const idleClip = new THREE.AnimationClip('idle', 4.0, [
+                new THREE.NumberKeyframeTrack('Hips.position[y]', idleTimes, [hipY, hipY - 0.008, hipY, hipY - 0.006, hipY]),
+                new THREE.NumberKeyframeTrack('Spine.rotation[x]', idleTimes, [0.02, 0.04, 0.02, 0.03, 0.02]),
+                new THREE.NumberKeyframeTrack('Neck.rotation[y]', idleTimes, [0, -0.42, 0.05, 0.32, 0]),
+                new THREE.NumberKeyframeTrack('LeftArm.rotation[x]', idleTimes, [-0.06, -0.02, -0.08, -0.04, -0.06]),
+                new THREE.NumberKeyframeTrack('RightArm.rotation[x]', idleTimes, [-0.04, -0.08, -0.02, -0.06, -0.04])
+            ]);
+
+            // 3. Standing & Holding/Scrolling Smartphone BUS TIME Web (2.4s loop)
+            const phoneTimes = [0, 0.6, 1.2, 1.8, 2.4];
+            const phoneClip = new THREE.AnimationClip('phone', 2.4, [
+                new THREE.NumberKeyframeTrack('Hips.position[y]', phoneTimes, [hipY, hipY - 0.006, hipY, hipY - 0.006, hipY]),
+                new THREE.NumberKeyframeTrack('Neck.rotation[x]', phoneTimes, [0.28, 0.32, 0.26, 0.30, 0.28]),
+                new THREE.NumberKeyframeTrack('LeftArm.rotation[x]', phoneTimes, [-0.72, -0.74, -0.70, -0.73, -0.72]),
+                new THREE.NumberKeyframeTrack('LeftArm.rotation[y]', phoneTimes, [-0.25, -0.25, -0.25, -0.25, -0.25]),
+                new THREE.NumberKeyframeTrack('LeftForeArm.rotation[x]', phoneTimes, [-1.15, -1.18, -1.12, -1.16, -1.15]),
+                // Right hand tapping & swiping smartphone screen
+                new THREE.NumberKeyframeTrack('RightArm.rotation[x]', phoneTimes, [-0.62, -0.68, -0.58, -0.66, -0.62]),
+                new THREE.NumberKeyframeTrack('RightArm.rotation[y]', phoneTimes, [0.35, 0.32, 0.38, 0.34, 0.35]),
+                new THREE.NumberKeyframeTrack('RightForeArm.rotation[x]', phoneTimes, [-1.05, -1.22, -0.95, -1.18, -1.05])
+            ]);
+
+            // 4. Seated on Bench Idle (3.6s loop) — Hip placed accurately on bench seat height
+            // Bench seat top is y = 0.47 above sidewalk; pelvis bottom sits at 0.47 -> Hips.y = 0.54
+            const seatHipY = 0.54;
+            const seatTimes = [0, 1.2, 2.4, 3.6];
+            const seatedClip = new THREE.AnimationClip('seated', 3.6, [
+                new THREE.NumberKeyframeTrack('Hips.position[y]', seatTimes, [seatHipY, seatHipY, seatHipY, seatHipY]),
+                new THREE.NumberKeyframeTrack('LeftLeg.rotation[x]', seatTimes, [-1.48, -1.48, -1.48, -1.48]),
+                new THREE.NumberKeyframeTrack('LeftShin.rotation[x]', seatTimes, [1.48, 1.48, 1.48, 1.48]),
+                new THREE.NumberKeyframeTrack('RightLeg.rotation[x]', seatTimes, [-1.48, -1.48, -1.48, -1.48]),
+                new THREE.NumberKeyframeTrack('RightShin.rotation[x]', seatTimes, [1.48, 1.48, 1.48, 1.48]),
+                new THREE.NumberKeyframeTrack('Spine.rotation[x]', seatTimes, [-0.06, -0.02, -0.07, -0.06]),
+                new THREE.NumberKeyframeTrack('Neck.rotation[y]', seatTimes, [-0.25, 0.25, -0.15, -0.25]),
+                new THREE.NumberKeyframeTrack('LeftArm.rotation[x]', seatTimes, [-0.45, -0.45, -0.45, -0.45]),
+                new THREE.NumberKeyframeTrack('LeftForeArm.rotation[x]', seatTimes, [-0.55, -0.55, -0.55, -0.55]),
+                new THREE.NumberKeyframeTrack('RightArm.rotation[x]', seatTimes, [-0.45, -0.45, -0.45, -0.45]),
+                new THREE.NumberKeyframeTrack('RightForeArm.rotation[x]', seatTimes, [-0.55, -0.55, -0.55, -0.55])
+            ]);
+
+            // 5. Seated & Viewing BUS TIME Web on Smartphone (2.4s loop)
+            const seatedPhoneClip = new THREE.AnimationClip('seatedPhone', 2.4, [
+                new THREE.NumberKeyframeTrack('Hips.position[y]', phoneTimes, [seatHipY, seatHipY, seatHipY, seatHipY, seatHipY]),
+                new THREE.NumberKeyframeTrack('LeftLeg.rotation[x]', phoneTimes, [-1.48, -1.48, -1.48, -1.48, -1.48]),
+                new THREE.NumberKeyframeTrack('LeftShin.rotation[x]', phoneTimes, [1.48, 1.48, 1.48, 1.48, 1.48]),
+                new THREE.NumberKeyframeTrack('RightLeg.rotation[x]', phoneTimes, [-1.48, -1.48, -1.48, -1.48, -1.48]),
+                new THREE.NumberKeyframeTrack('RightShin.rotation[x]', phoneTimes, [1.48, 1.48, 1.48, 1.48, 1.48]),
+                new THREE.NumberKeyframeTrack('Neck.rotation[x]', phoneTimes, [0.30, 0.34, 0.28, 0.32, 0.30]),
+                new THREE.NumberKeyframeTrack('LeftArm.rotation[x]', phoneTimes, [-0.75, -0.77, -0.73, -0.76, -0.75]),
+                new THREE.NumberKeyframeTrack('LeftArm.rotation[y]', phoneTimes, [-0.25, -0.25, -0.25, -0.25, -0.25]),
+                new THREE.NumberKeyframeTrack('LeftForeArm.rotation[x]', phoneTimes, [-1.15, -1.18, -1.12, -1.16, -1.15]),
+                new THREE.NumberKeyframeTrack('RightArm.rotation[x]', phoneTimes, [-0.65, -0.70, -0.60, -0.68, -0.65]),
+                new THREE.NumberKeyframeTrack('RightArm.rotation[y]', phoneTimes, [0.35, 0.32, 0.38, 0.34, 0.35]),
+                new THREE.NumberKeyframeTrack('RightForeArm.rotation[x]', phoneTimes, [-1.05, -1.24, -0.96, -1.18, -1.05])
+            ]);
+
+            // 6. Kiosk Touch & Scroll Gesture (2.6s loop)
+            const kTimes = [0, 0.65, 1.3, 1.95, 2.6];
+            const kioskClip = new THREE.AnimationClip('kiosk', 2.6, [
+                new THREE.NumberKeyframeTrack('Hips.position[y]', kTimes, [hipY, hipY - 0.005, hipY, hipY - 0.005, hipY]),
+                new THREE.NumberKeyframeTrack('Neck.rotation[x]', kTimes, [0.06, -0.05, 0.08, 0.02, 0.06]),
+                new THREE.NumberKeyframeTrack('RightArm.rotation[x]', kTimes, [-0.88, -1.08, -0.78, -1.02, -0.88]),
+                new THREE.NumberKeyframeTrack('RightForeArm.rotation[x]', kTimes, [-0.55, -0.35, -0.68, -0.42, -0.55]),
+                new THREE.NumberKeyframeTrack('LeftArm.rotation[x]', kTimes, [-0.15, -0.18, -0.12, -0.16, -0.15])
+            ]);
+
+            return { walk: walkClip, idle: idleClip, phone: phoneClip, seated: seatedClip, seatedPhone: seatedPhoneClip, kiosk: kioskClip };
+        }
+
+        function setNpcAction(agent, actionName, fadeDuration = 0.28) {
+            const next = agent.actions[actionName];
+            if (!next || agent.activeAction === next) return;
+            next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(fadeDuration).play();
+            if (agent.activeAction) {
+                agent.activeAction.fadeOut(fadeDuration);
+            }
+            agent.activeAction = next;
+        }
+
+        function placeNpcAtInitialSlot(agent) {
+            const p = agent.profile;
+            agent.root.position.y = SIDEWALK_TOP_Y; // Exact Grounding on sidewalk
+
+            if (p.role === 'seated') {
+                agent.root.position.set(p.seatX, SIDEWALK_TOP_Y, -0.62);
+                agent.root.rotation.y = 0; // Facing forward toward Phetkasem Road
+                setNpcAction(agent, p.hasPhone ? 'seatedPhone' : 'seated', 0.01);
+            } else if (p.role === 'kiosk') {
+                agent.root.position.set(p.slotX, SIDEWALK_TOP_Y, p.slotZ);
+                agent.root.rotation.y = p.facing;
+                setNpcAction(agent, p.hasPhone ? 'phone' : 'kiosk', 0.01);
+            } else if (p.role === 'waitPhone') {
+                agent.root.position.set(p.slotX, SIDEWALK_TOP_Y, p.slotZ);
+                agent.root.rotation.y = p.facing;
+                setNpcAction(agent, 'phone', 0.01);
+            } else if (p.role === 'waiting') {
+                agent.root.position.set(p.slotX, SIDEWALK_TOP_Y, p.slotZ);
+                agent.root.rotation.y = p.facing;
+                setNpcAction(agent, 'idle', 0.01);
+            } else {
+                // Commuter walking along sidewalk corridor
+                agent.root.position.set(p.startX, SIDEWALK_TOP_Y, p.laneZ);
+                agent.root.rotation.y = p.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+                setNpcAction(agent, 'walk', 0.01);
+            }
+        }
+
+        function buildNpcCrowd(count) {
+            // Clear existing NPCs if re-spawning
+            if (focusedNpc) clearNpcFocus();
+            npcAgents.forEach(a => scene.remove(a.root));
+            npcAgents = [];
+            npcHitboxes = [];
+
+            const clamped = Math.min(count, npcProfiles.length);
+            for (let i = 0; i < clamped; i++) {
+                const agent = createArticulatedNpc(npcProfiles[i], i);
+                npcAgents.push(agent);
+            }
+
+            // Update HUD counters
+            const badge = document.getElementById('npc-count-badge');
+            const label = document.getElementById('crowd-mode-label');
+            if (badge) badge.textContent = `${clamped} คน`;
+            if (label) {
+                label.textContent = clamped <= 5 ? 'น้อย' : (clamped <= 12 ? 'ปานกลาง' : 'ชั่วโมงเร่งด่วน');
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 7D. HERO ARRIVAL EV BUS (DOCKING & PASSENGER BOARDING SIMULATION)
+         * ============================================================================
+         */
+        function buildHeroArrivalBus() {
+            heroBus = new THREE.Group();
+            heroBus.position.set(-36, 0.02, 4.15); // Curbside Bus Bay lane
+            scene.add(heroBus);
+
+            const bodyMat = new THREE.MeshStandardMaterial({ color: '#0284C7', roughness: 0.25, metalness: 0.65 });
+            const darkTrimMat = new THREE.MeshStandardMaterial({ color: '#0F172A', roughness: 0.35, metalness: 0.7 });
+            const glassMat = new THREE.MeshStandardMaterial({ color: '#BAE6FD', emissive: '#38BDF8', emissiveIntensity: 0.35, roughness: 0.1 });
+
+            // Main EV Bus Chassis
+            const chassis = new THREE.Mesh(new THREE.BoxGeometry(9.6, 2.75, 2.35), bodyMat);
+            chassis.position.y = 1.65;
+            chassis.castShadow = true;
+            chassis.receiveShadow = true;
+            heroBus.add(chassis);
+
+            // Roof Air-Con Pod
+            const acPod = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.32, 1.75), darkTrimMat);
+            acPod.position.y = 3.16;
+            heroBus.add(acPod);
+
+            // Panoramic Side Windows
+            const winMesh = new THREE.Mesh(new THREE.BoxGeometry(8.6, 1.05, 2.38), glassMat);
+            winMesh.position.y = 2.02;
+            heroBus.add(winMesh);
+
+            // Front LED Route Sign (สาย 84 เดอะมอลล์บางแค)
+            const ledCanvas = document.createElement('canvas');
+            ledCanvas.width = 512;
+            ledCanvas.height = 128;
+            const lCtx = ledCanvas.getContext('2d');
+            lCtx.fillStyle = '#050A14';
+            lCtx.fillRect(0, 0, 512, 128);
+            lCtx.fillStyle = '#38BDF8';
+            lCtx.font = 'bold 54px Inter, sans-serif';
+            lCtx.fillText('84 EV', 24, 82);
+            lCtx.fillStyle = '#34D399';
+            lCtx.font = 'bold 34px "Noto Sans Thai", sans-serif';
+            lCtx.fillText('วัดไร่ขิง - กรุงธนบุรี', 195, 76);
+
+            const ledTex = new THREE.CanvasTexture(ledCanvas);
+            const frontSign = new THREE.Mesh(new THREE.PlaneGeometry(1.95, 0.45), new THREE.MeshBasicMaterial({ map: ledTex }));
+            frontSign.rotation.y = Math.PI / 2;
+            frontSign.position.set(4.82, 2.72, 0);
+            heroBus.add(frontSign);
+
+            // Sliding Passenger Doors (Curbside Z = -1.19)
+            heroBusDoorFront = new THREE.Mesh(new THREE.BoxGeometry(0.95, 2.15, 0.08), darkTrimMat);
+            heroBusDoorFront.position.set(2.4, 1.35, -1.18);
+            heroBus.add(heroBusDoorFront);
+
+            heroBusDoorRear = new THREE.Mesh(new THREE.BoxGeometry(0.95, 2.15, 0.08), darkTrimMat);
+            heroBusDoorRear.position.set(-1.2, 1.35, -1.18);
+            heroBus.add(heroBusDoorRear);
+
+            // 4 Rubber Wheels grounded on road
+            const wheelGeo = new THREE.CylinderGeometry(0.46, 0.46, 0.34, 18);
+            wheelGeo.rotateX(Math.PI / 2);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: '#090D16', roughness: 0.8 });
+            [[-3.1, -1.05], [-3.1, 1.05], [3.1, -1.05], [3.1, 1.05]].forEach(([wx, wz]) => {
+                const w = new THREE.Mesh(wheelGeo, wheelMat);
+                w.position.set(wx, 0.46, wz);
+                heroBus.add(w);
+            });
+        }
+
+        function updateCrowdAndBusSimulation(dt, elapsed) {
+            // 1. Update Hero Arrival Bus State Machine
+            const statusEl = document.getElementById('bus-sim-status');
+            const labelEl = document.getElementById('bus-sim-label');
+
+            if (heroBusState.phase === 'APPROACHING') {
+                // Smooth deceleration into bus bay at X = 0.2
+                const dist = 0.2 - heroBus.position.x;
+                if (dist > 0.08) {
+                    const targetSpd = Math.min(8.5, Math.max(1.2, dist * 0.95));
+                    heroBusState.speed = THREE.MathUtils.lerp(heroBusState.speed, targetSpd, 0.08);
+                    heroBus.position.x += heroBusState.speed * dt;
+                    if (statusEl) statusEl.textContent = 'ARRIVING';
+                } else {
+                    heroBus.position.x = 0.2;
+                    heroBusState.speed = 0;
+                    heroBusState.phase = 'DOCKED';
+                    heroBusState.dockTimer = 7.5; // Stay docked for 7.5 seconds
+                    playChimeTone(660, 880);
+                    if (statusEl) statusEl.textContent = 'BOARDING';
+                    if (labelEl) labelEl.textContent = 'กำลังรับผู้โดยสาร...';
+                }
+            } else if (heroBusState.phase === 'DOCKED') {
+                heroBusState.doorOpen = THREE.MathUtils.lerp(heroBusState.doorOpen, 0.85, 0.1);
+                heroBusState.dockTimer -= dt;
+                if (heroBusState.dockTimer <= 0) {
+                    heroBusState.phase = 'DEPARTING';
+                    if (statusEl) statusEl.textContent = 'DEPARTING';
+                    if (labelEl) labelEl.textContent = 'รถกำลังออกจากป้าย';
+                }
+            } else if (heroBusState.phase === 'DEPARTING') {
+                heroBusState.doorOpen = THREE.MathUtils.lerp(heroBusState.doorOpen, 0, 0.15);
+                if (heroBusState.doorOpen < 0.08) {
+                    heroBusState.speed = THREE.MathUtils.lerp(heroBusState.speed, 11.0, 0.04);
+                    heroBus.position.x += heroBusState.speed * dt;
+                    if (heroBus.position.x > 38) {
+                        heroBusState.phase = 'IDLE';
+                        heroBus.position.x = -36;
+                        heroBusState.speed = 0;
+                        if (statusEl) statusEl.textContent = 'READY';
+                        if (labelEl) labelEl.textContent = 'จำลองรถเมล์เข้าป้าย';
+                        // Reset waiting/seated NPCs smoothly back to their roles
+                        npcAgents.forEach(a => placeNpcAtInitialSlot(a));
+                    }
+                }
+            }
+
+            if (heroBusDoorFront && heroBusDoorRear) {
+                heroBusDoorFront.position.x = 2.4 + heroBusState.doorOpen;
+                heroBusDoorRear.position.x = -1.2 - heroBusState.doorOpen;
+            }
+
+            // Check if bus is arriving soon (either manually triggered or liveBusData[0].etaSec <= 25)
+            const busIsArriving = heroBusState.phase === 'APPROACHING' || heroBusState.phase === 'DOCKED' || (liveBusData[0] && liveBusData[0].etaSec <= 20);
+
+            // 2. Update All NPCs with Steering Avoidance & Bus Arrival Reaction
+            npcAgents.forEach((agent, idx) => {
+                agent.mixer.update(dt);
+                agent.root.position.y = SIDEWALK_TOP_Y; // Strict Grounding Lock
+
+                // Dim smartphone light slightly in daylight, brighter at night
+                if (agent.phoneLight) {
+                    agent.phoneLight.intensity = 0.35 + Math.sin(elapsed * 4 + idx) * 0.06;
+                }
+
+                // Reaction when bus is approaching or docked: look up from smartphone & step toward curb queue
+                const isEligibleToBoard = (agent.profile.role === 'waitPhone' || agent.profile.role === 'waiting' || (agent.profile.role === 'seated' && idx % 2 === 0));
+
+                if (busIsArriving && isEligibleToBoard && heroBusState.phase !== 'DEPARTING') {
+                    // Target boarding queue spot near curb (Z = 1.95, around front door X = 2.6 or rear door X = -1.0)
+                    const doorX = (idx % 2 === 0) ? 2.65 : -0.95;
+                    const queueRank = Math.floor(idx / 2);
+                    const targetX = doorX - queueRank * 0.42;
+                    const targetZ = 1.92 - queueRank * 0.25;
+
+                    const toTarget = new THREE.Vector3(targetX - agent.root.position.x, 0, targetZ - agent.root.position.z);
+                    const dist = toTarget.length();
+
+                    if (dist > 0.14) {
+                        toTarget.normalize();
+                        applySteeringAvoidance(agent, toTarget, 1.35, dt);
+                        setNpcAction(agent, 'walk', 0.22);
+                    } else {
+                        // Arrived at curb queue: face bus door & wait to board
+                        const lookAngle = Math.atan2(doorX - agent.root.position.x, 2.9 - agent.root.position.z);
+                        agent.root.rotation.y = lerpAngle(agent.root.rotation.y, lookAngle, 0.12);
+                        setNpcAction(agent, 'idle', 0.25);
+                    }
+                    return;
+                }
+
+                // Normal State Behaviors
+                if (agent.profile.role === 'seated') {
+                    agent.root.position.set(agent.profile.seatX, SIDEWALK_TOP_Y, -0.62);
+                    agent.root.rotation.y = 0;
+                    setNpcAction(agent, agent.profile.hasPhone ? 'seatedPhone' : 'seated', 0.25);
+                } else if (agent.profile.role === 'kiosk') {
+                    agent.root.position.set(agent.profile.slotX, SIDEWALK_TOP_Y, agent.profile.slotZ);
+                    agent.root.rotation.y = agent.profile.facing;
+                    setNpcAction(agent, agent.profile.hasPhone ? 'phone' : 'kiosk', 0.25);
+                } else if (agent.profile.role === 'waitPhone') {
+                    agent.root.position.set(agent.profile.slotX, SIDEWALK_TOP_Y, agent.profile.slotZ);
+                    agent.root.rotation.y = agent.profile.facing + Math.sin(elapsed * 0.6 + agent.phaseOffset) * 0.08;
+                    setNpcAction(agent, 'phone', 0.25);
+                } else if (agent.profile.role === 'waiting') {
+                    agent.root.position.set(agent.profile.slotX, SIDEWALK_TOP_Y, agent.profile.slotZ);
+                    agent.root.rotation.y = agent.profile.facing + Math.sin(elapsed * 0.5 + agent.phaseOffset) * 0.12;
+                    setNpcAction(agent, 'idle', 0.25);
+                } else if (agent.profile.role === 'commuter') {
+                    // Commuter walking along sidewalk corridor with obstacle & crowd avoidance
+                    const desiredDir = new THREE.Vector3(agent.dir, 0, (agent.profile.laneZ - agent.root.position.z) * 0.8).normalize();
+                    applySteeringAvoidance(agent, desiredDir, 1.15, dt);
+                    setNpcAction(agent, 'walk', 0.2);
+
+                    // Wrap seamlessly at sidewalk ends
+                    if (agent.dir > 0 && agent.root.position.x > 19.5) {
+                        agent.root.position.x = -19.5;
+                    } else if (agent.dir < 0 && agent.root.position.x < -19.5) {
+                        agent.root.position.x = 19.5;
+                    }
+                }
+            });
+        }
+
+        function applySteeringAvoidance(agent, desiredDir, walkSpeed, dt) {
+            const steer = desiredDir.clone();
+            const pos = agent.root.position;
+
+            // 1. Avoid static shelter pillars, bench & kiosk
+            for (let i = 0; i < sceneObstacles.length; i++) {
+                const obs = sceneObstacles[i];
+                const dx = pos.x - obs.x;
+                const dz = pos.z - obs.z;
+                const dist = Math.hypot(dx, dz);
+                const minSep = obs.r + 0.36;
+                if (dist < minSep && dist > 0.001) {
+                    const push = (minSep - dist) / minSep;
+                    steer.x += (dx / dist) * push * 2.4;
+                    steer.z += (dz / dist) * push * 2.4;
+                }
+            }
+
+            // 2. Inter-NPC crowd separation (no overlapping bodies)
+            for (let j = 0; j < npcAgents.length; j++) {
+                const other = npcAgents[j];
+                if (other === agent) continue;
+                const dx = pos.x - other.root.position.x;
+                const dz = pos.z - other.root.position.z;
+                const dist = Math.hypot(dx, dz);
+                const minSep = 0.62;
+                if (dist < minSep && dist > 0.001) {
+                    const push = (minSep - dist) / minSep;
+                    steer.x += (dx / dist) * push * 1.9;
+                    steer.z += (dz / dist) * push * 1.9;
+                }
+            }
+
+            steer.y = 0;
+            if (steer.lengthSq() > 0.0001) {
+                steer.normalize();
+                pos.x += steer.x * walkSpeed * dt;
+                pos.z += steer.z * walkSpeed * dt;
+
+                // Keep inside safe sidewalk bounds (Z in [-0.15, 2.22] when walking)
+                pos.z = THREE.MathUtils.clamp(pos.z, -0.15, 2.22);
+
+                const targetYaw = Math.atan2(steer.x, steer.z);
+                agent.root.rotation.y = lerpAngle(agent.root.rotation.y, targetYaw, 0.14);
+            }
+        }
+
+        function lerpAngle(a, b, t) {
+            let diff = b - a;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            return a + diff * t;
+        }
+
+        function createCalloutDOMElements() {
+            const layer = document.getElementById('annotations-layer');
+            if (!layer) return;
+            layer.innerHTML = '';
+
+            calloutDefinitions.forEach(item => {
+                const pin = document.createElement('div');
+                pin.id = `pin-${item.id}`;
+                pin.className = 'callout-pin';
+                pin.innerHTML = `
+                    <div class="callout-badge">
+                        <span>${item.icon}</span>
+                        <span>${item.label}</span>
+                    </div>
+                    <div class="callout-stem"></div>
+                    <div class="callout-dot"></div>
+                `;
+                pin.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleCalloutSelect(item);
+                });
+                layer.appendChild(pin);
+            });
+        }
+
+        function updateCalloutPositions() {
+            if (!showPins) return;
+
+            const tempV = new THREE.Vector3();
+            calloutDefinitions.forEach(item => {
+                const el = document.getElementById(`pin-${item.id}`);
+                if (!el) return;
+
+                tempV.copy(item.anchor);
+                tempV.project(camera);
+
+                // Hide if behind camera
+                if (tempV.z > 1) {
+                    el.style.display = 'none';
+                    return;
+                }
+
+                const x = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (-(tempV.y * 0.5) + 0.5) * window.innerHeight;
+
+                el.style.display = 'flex';
+                el.style.left = `${x}px`;
+                el.style.top = `${y}px`;
+            });
+        }
+
+        function toggleCalloutPins() {
+            showPins = !showPins;
+            const btn = document.getElementById('btn-toggle-pins');
+            const badge = document.getElementById('pin-status-badge');
+            const pins = document.querySelectorAll('.callout-pin');
+
+            if (showPins) {
+                btn.classList.add('active');
+                badge.textContent = 'ON';
+                pins.forEach(p => p.classList.remove('hidden-pin'));
+            } else {
+                btn.classList.remove('active');
+                badge.textContent = 'OFF';
+                pins.forEach(p => p.classList.add('hidden-pin'));
+            }
+        }
+
+        function toggleAutoRotate() {
+            controls.autoRotate = !controls.autoRotate;
+            const btn = document.getElementById('btn-auto-rotate');
+            btn.classList.toggle('active', controls.autoRotate);
+        }
+
+        function setCameraPreset(presetKey) {
+            const preset = cameraPresets[presetKey];
+            if (!preset) return;
+
+            clearNpcFocus(false);
+
+            // Highlight active preset button
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            const activeBtn = document.getElementById(`preset-${presetKey}`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            controls.autoRotate = false;
+            document.getElementById('btn-auto-rotate').classList.remove('active');
+
+            targetCamPos.copy(preset.pos);
+            targetLookAt.copy(preset.target);
+            isAnimatingCamera = true;
+        }
+
+        /**
+         * ============================================================================
+         * 8B. CROWD CONTROLS, SMARTPHONE POV ZOOM & BUS ARRIVAL TRIGGERS
+         * ============================================================================
+         */
+        function setCrowdDensity(count) {
+            crowdDensity = count;
+            [5, 12, 20].forEach(n => {
+                const btn = document.getElementById(`density-${n}`);
+                if (!btn) return;
+                if (n === count) {
+                    btn.className = 'density-btn py-1.5 rounded-lg text-[11px] font-semibold bg-sky-500/30 text-sky-200 border border-sky-400/50 transition';
+                } else {
+                    btn.className = 'density-btn py-1.5 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white transition';
+                }
+            });
+            buildNpcCrowd(count);
+            playChimeTone(520, 660);
+        }
+
+        function focusNextPhoneUser() {
+            const phoneUsers = npcAgents.filter(a => a.profile.hasPhone && a.phoneMesh);
+            if (!phoneUsers.length) return;
+
+            phoneUserCycleIdx = (phoneUserCycleIdx + 1) % phoneUsers.length;
+            const targetAgent = phoneUsers[phoneUserCycleIdx];
+
+            const idxLabel = document.getElementById('phone-user-index');
+            if (idxLabel) idxLabel.textContent = `${phoneUserCycleIdx + 1}/${phoneUsers.length}`;
+
+            focusOnNpc(targetAgent, 'phone');
+        }
+
+        function focusOnNpc(agent, mode = 'phone') {
+            if (!agent) return;
+            focusedNpc = agent;
+            focusMode = (mode === 'phone' && agent.phoneMesh) ? 'phone' : 'eye';
+            isAnimatingCamera = false;
+
+            controls.autoRotate = false;
+            const autoBtn = document.getElementById('btn-auto-rotate');
+            if (autoBtn) autoBtn.classList.remove('active');
+
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+
+            const bar = document.getElementById('follow-target-bar');
+            const nameEl = document.getElementById('follow-target-name');
+            if (bar && nameEl) {
+                bar.classList.remove('hidden');
+                bar.classList.add('flex');
+                nameEl.textContent = focusMode === 'phone'
+                    ? `📱 ซูมจอมือถือ: ${agent.profile.name}`
+                    : `👁️ มุมมองสายตา: ${agent.profile.name}`;
+            }
+            playChimeTone(580, 780);
+        }
+
+        function clearNpcFocus(resetToOverview = true) {
+            focusedNpc = null;
+            const bar = document.getElementById('follow-target-bar');
+            if (bar) {
+                bar.classList.add('hidden');
+                bar.classList.remove('flex');
+            }
+            if (resetToOverview) {
+                setCameraPreset('overview');
+            }
+        }
+
+        function updateFocusedNpcCamera() {
+            if (!focusedNpc) return;
+
+            if (focusMode === 'phone' && focusedNpc.phoneMesh) {
+                // Close-up Camera directly framing the BUS TIME Web screen in the NPC's hand
+                const phoneWorldPos = new THREE.Vector3();
+                focusedNpc.phoneMesh.getWorldPosition(phoneWorldPos);
+
+                const npcForward = new THREE.Vector3(0, 0, 1).applyQuaternion(focusedNpc.root.quaternion);
+                const npcRight = new THREE.Vector3(1, 0, 0).applyQuaternion(focusedNpc.root.quaternion);
+
+                // Position camera slightly over the NPC's shoulder looking down at the glowing smartphone screen
+                const desiredCam = phoneWorldPos.clone()
+                    .addScaledVector(npcForward, -0.22)
+                    .addScaledVector(npcRight, -0.26)
+                    .add(new THREE.Vector3(0, 0.24, 0));
+
+                camera.position.lerp(desiredCam, 0.14);
+                controls.target.lerp(phoneWorldPos, 0.18);
+            } else {
+                // Eye-level over-the-shoulder perspective
+                const headWorldPos = new THREE.Vector3();
+                focusedNpc.neck.getWorldPosition(headWorldPos);
+                headWorldPos.y += 0.14;
+
+                const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(focusedNpc.root.quaternion);
+                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(focusedNpc.root.quaternion);
+
+                const desiredCam = headWorldPos.clone()
+                    .addScaledVector(forward, -0.45)
+                    .addScaledVector(right, 0.28)
+                    .add(new THREE.Vector3(0, 0.08, 0));
+
+                const lookPoint = headWorldPos.clone().addScaledVector(forward, 2.5);
+                camera.position.lerp(desiredCam, 0.12);
+                controls.target.lerp(lookPoint, 0.14);
+            }
+        }
+
+        function triggerBusArrival() {
+            if (heroBusState.phase !== 'IDLE') return;
+            heroBusState.phase = 'APPROACHING';
+            heroBusState.speed = 6.5;
+
+            // Update first bus in liveBusData to "กำลังเข้าป้าย"
+            if (liveBusData[0]) {
+                liveBusData[0].etaSec = 15;
+                updateEtaScreenTexture();
+                updateKioskScreenTexture();
+            }
+
+            const statusEl = document.getElementById('bus-sim-status');
+            const labelEl = document.getElementById('bus-sim-label');
+            if (statusEl) statusEl.textContent = 'INCOMING';
+            if (labelEl) labelEl.textContent = 'รถเมล์ EV กำลังเข้าป้าย...';
+            playChimeTone(440, 554);
+        }
+
+        function toggleAmbientAudio() {
+            audioEnabled = !audioEnabled;
+            const icon = document.getElementById('audio-icon');
+            const btn = document.getElementById('btn-audio');
+            if (icon) icon.textContent = audioEnabled ? '🔊' : '🔇';
+            if (btn) btn.classList.toggle('active', audioEnabled);
+            if (audioEnabled) {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                playChimeTone(523.25, 659.25);
+            }
+        }
+
+        function playChimeTone(freq1, freq2) {
+            if (!audioEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = audioCtx.currentTime;
+                [freq1, freq2].forEach((f, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f, now + i * 0.12);
+                    gain.gain.setValueAtTime(0.06, now + i * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.12 + 0.35);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + i * 0.12);
+                    osc.stop(now + i * 0.12 + 0.36);
+                });
+            } catch (e) {}
+        }
+
+        function handleCalloutSelect(item) {
+            // Highlight selected pin
+            document.querySelectorAll('.callout-pin').forEach(p => p.classList.remove('selected'));
+            const pinEl = document.getElementById(`pin-${item.id}`);
+            if (pinEl) pinEl.classList.add('selected');
+
+            // Smooth camera zoom to the component
+            if (item.preset && cameraPresets[item.preset]) {
+                setCameraPreset(item.preset);
+            }
+
+            // Open Kiosk Simulator Drawer to corresponding tab
+            setTimeout(() => {
+                openKioskModal(item.tab || 'eta');
+            }, 420);
+        }
+
+        /**
+         * ============================================================================
+         * 9. RAYCASTER FOR DIRECT 3D MESH & NPC CLICK INTERACTION
+         * ============================================================================
+         */
+        function setupRaycasterInteraction() {
+            const raycaster = new THREE.Raycaster();
+            const pointer = new THREE.Vector2();
+            let downX = 0, downY = 0;
+
+            renderer.domElement.addEventListener('pointerdown', (e) => {
+                downX = e.clientX;
+                downY = e.clientY;
+            });
+
+            renderer.domElement.addEventListener('pointerup', (e) => {
+                // Ignore if user was dragging/orbiting
+                const dist = Math.hypot(e.clientX - downX, e.clientY - downY);
+                if (dist > 6) return;
+
+                pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+                pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(pointer, camera);
+
+                // 1. Check if user clicked on an NPC passenger first
+                const npcHits = raycaster.intersectObjects(npcHitboxes, false);
+                if (npcHits.length > 0 && npcHits[0].object.userData.isNpc) {
+                    const agent = npcHits[0].object.userData.agent;
+                    focusOnNpc(agent, agent.profile.hasPhone ? 'phone' : 'eye');
+                    return;
+                }
+
+                // 2. Check interactive screens / IoT devices
+                const intersects = raycaster.intersectObjects(interactiveMeshes, false);
+                if (intersects.length > 0) {
+                    const hit = intersects[0].object.userData;
+                    if (hit && hit.interactive) {
+                        if (hit.preset) setCameraPreset(hit.preset);
+                        setTimeout(() => openKioskModal(hit.tab), 380);
+                    }
+                }
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 10. INTERACTIVE KIOSK SIMULATOR UI (BUS TIME, DIRECTORY, MAP, IOT)
+         * ============================================================================
+         */
+        let activeKioskTab = 'eta';
+
+        function openKioskModal(tab = 'eta') {
+            const modal = document.getElementById('kiosk-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            switchKioskTab(tab);
+        }
+
+        function closeKioskModal() {
+            const modal = document.getElementById('kiosk-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.querySelectorAll('.callout-pin').forEach(p => p.classList.remove('selected'));
+        }
+
+        function switchKioskTab(tab) {
+            activeKioskTab = tab;
+
+            // Update Tab Button Styles
+            document.querySelectorAll('.kiosk-tab').forEach(btn => {
+                btn.className = 'kiosk-tab py-2 px-1 rounded-xl text-slate-400 hover:bg-slate-800 flex flex-col items-center gap-1 transition';
+            });
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            if (activeBtn) {
+                activeBtn.className = 'kiosk-tab py-2 px-1 rounded-xl bg-sky-500/25 text-sky-300 border border-sky-400/40 flex flex-col items-center gap-1 transition';
+            }
+
+            renderKioskContent();
+        }
+
+        function renderKioskContent() {
+            const container = document.getElementById('kiosk-content');
+            if (!container) return;
+
+            if (activeKioskTab === 'eta') {
+                container.innerHTML = `
+                    <div class="flex items-center justify-between bg-sky-500/10 border border-sky-400/30 rounded-2xl p-3.5">
+                        <div>
+                            <div class="text-xs text-sky-300 font-semibold">ระบบติดตามรถโดยสารเรียลไทม์ (GPS)</div>
+                            <div class="text-sm text-white font-bold mt-0.5">รถเมล์กำลังมุ่งหน้ามาป้ายเดอะมอลล์ บางแค</div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-400/30">LIVE</span>
+                    </div>
+
+                    <div class="space-y-2.5">
+                        ${liveBusData.map(bus => {
+                            const mins = Math.ceil(bus.etaSec / 60);
+                            const arriving = bus.etaSec <= 45;
+                            return `
+                                <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-sky-400/50 transition flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg text-slate-950 shrink-0 shadow-md" style="background:${bus.color}">
+                                            ${bus.line}
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="text-sm font-semibold text-white truncate">${bus.dest}</div>
+                                            <div class="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
+                                                <span class="px-1.5 py-0.5 rounded bg-slate-800 text-sky-300">${bus.type}</span>
+                                                <span>ผู้โดยสาร: <strong class="text-slate-200">${bus.crowd}</strong></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right shrink-0">
+                                        <div class="text-sm font-bold ${arriving ? 'text-emerald-400 animate-pulse' : 'text-sky-400'}">
+                                            ${arriving ? 'กำลังเข้าป้าย' : `อีก ${mins} นาที`}
+                                        </div>
+                                        <div class="text-[11px] text-slate-500 font-mono mt-0.5">${bus.etaSec} วินาที</div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            } else if (activeKioskTab === 'routes') {
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="relative">
+                            <input type="text" id="route-search" oninput="filterRoutes(this.value)" placeholder="ค้นหาสายรถเมล์ หรือปลายทาง (เช่น 84, สนามหลวง, EV)..." 
+                                class="w-full bg-slate-900 border border-slate-700 focus:border-sky-400 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none">
+                        </div>
+                        <div id="route-list-box" class="space-y-2">
+                            ${renderRouteCards(directoryRoutes)}
+                        </div>
+                    </div>
+                `;
+            } else if (activeKioskTab === 'map') {
+                container.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="rounded-2xl bg-slate-900 border border-sky-400/30 p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold text-sky-400 uppercase tracking-wider">แผนผังเชื่อมต่อโครงข่ายฝั่งธนบุรี</span>
+                                <span class="text-[11px] px-2 py-0.5 rounded bg-blue-600 text-white font-semibold">MRT สายสีน้ำเงิน</span>
+                            </div>
+                            
+                            <!-- Interactive SVG Route & MRT Connection Diagram -->
+                            <svg viewBox="0 0 400 230" class="w-full h-auto rounded-xl bg-slate-950 border border-slate-800 p-2">
+                                <!-- Chao Phraya River -->
+                                <path d="M 335 10 Q 310 115 345 220" stroke="#0369A1" stroke-width="18" fill="none" opacity="0.65"/>
+                                <text x="315" y="25" fill="#7DD3FC" font-size="9">แม่น้ำเจ้าพระยา</text>
+
+                                <!-- Phetkasem Road Corridor -->
+                                <line x1="25" y1="130" x2="310" y2="105" stroke="#334155" stroke-width="10" stroke-linecap="round"/>
+                                <line x1="25" y1="130" x2="310" y2="105" stroke="#38BDF8" stroke-width="3" stroke-dasharray="6,4"/>
+
+                                <!-- Stops along Phetkasem -->
+                                <circle cx="45" cy="128" r="5" fill="#94A3B8"/>
+                                <text x="22" y="150" fill="#94A3B8" font-size="10">พุทธมณฑลสาย 2-4</text>
+
+                                <!-- Main Hub: The Mall Bangkae -->
+                                <circle cx="150" cy="119" r="14" fill="#38BDF8" opacity="0.25"/>
+                                <circle cx="150" cy="119" r="7" fill="#38BDF8" stroke="#FFF" stroke-width="2"/>
+                                <rect x="85" y="72" width="142" height="32" rx="6" fill="#0284C7"/>
+                                <text x="95" y="92" fill="#FFFFFF" font-size="11" font-weight="bold">📍 เดอะมอลล์ บางแค</text>
+
+                                <!-- MRT Lak Song BL38 -->
+                                <rect x="148" y="136" width="115" height="26" rx="6" fill="#1D4ED8"/>
+                                <text x="156" y="153" fill="#FFFFFF" font-size="10" font-weight="bold">🚇 MRT หลักสอง (30 ม.)</text>
+
+                                <!-- Bang Wa Interchange -->
+                                <circle cx="255" cy="110" r="6" fill="#22D3EE"/>
+                                <text x="235" y="95" fill="#CBD5E1" font-size="10">บางหว้า (BTS/MRT)</text>
+
+                                <!-- Wongwian Yai / Sanam Luang -->
+                                <circle cx="305" cy="105" r="5" fill="#F59E0B"/>
+                                <text x="275" y="130" fill="#FCD34D" font-size="10">วงเวียนใหญ่ / สนามหลวง</text>
+                            </svg>
+                        </div>
+
+                        <div class="p-4 rounded-2xl bg-gradient-to-br from-blue-950/80 to-slate-900 border border-blue-500/30 space-y-2">
+                            <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                                <span>🚇</span> จุดเชื่อมต่อรถไฟฟ้า MRT สายสีน้ำเงิน (สถานีหลักสอง BL38)
+                            </h4>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                ผู้โดยสารสามารถเดินเชื่อมจากป้ายรถเมล์อัจฉริยะขึ้นบันไดทางเชื่อม Skywalk ด้านซ้ายของป้าย เข้าสู่ตัวสถานี <strong>MRT หลักสอง (ทางออกที่ 2)</strong> และศูนย์การค้า <strong>เดอะมอลล์ ไลฟ์สโตร์ บางแค</strong> ได้โดยตรงในระยะทางเพียง 30 เมตร
+                            </p>
+                        </div>
+                    </div>
+                `;
+            } else if (activeKioskTab === 'iot') {
+                container.innerHTML = `
+                    <div class="space-y-3.5">
+                        <!-- CCTV Status Card -->
+                        <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                                    <span>📹</span> กล้องวงจรปิดอัจฉริยะ (CCTV 2 จุด)
+                                </h4>
+                                <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[11px] font-bold">ONLINE • AI ACTIVE</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2.5 text-xs">
+                                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                                    <div class="text-sky-400 font-semibold">CAM-01 (มุมซ้ายหลังคา)</div>
+                                    <div class="text-slate-300 mt-1">มุมมอง: พื้นที่พักคอย & ทางเชื่อม MRT</div>
+                                    <div class="text-emerald-400 text-[11px] mt-1">● บันทึกภาพ 4K Night Vision</div>
+                                </div>
+                                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                                    <div class="text-sky-400 font-semibold">CAM-02 (มุมขวาหลังคา)</div>
+                                    <div class="text-slate-300 mt-1">มุมมอง: ช่องจอดรถเมล์ & ตู้ Kiosk</div>
+                                    <div class="text-emerald-400 text-[11px] mt-1">● ตรวจจับป้ายทะเบียนรถเมล์</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- USB Fast Charging Stations -->
+                        <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                                    <span>⚡</span> จุดบริการชาร์จแบตเตอรี่ USB (2 จุด)
+                                </h4>
+                                <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[11px] font-bold">FAST CHARGE 18W</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2.5 text-xs">
+                                <div class="p-3 rounded-xl bg-slate-950 border border-sky-500/30">
+                                    <div class="text-white font-semibold">จุดชาร์จฝั่งซ้าย (เสา 1)</div>
+                                    <div class="text-slate-400 mt-1">พอร์ต: 2x USB-A / Type-C</div>
+                                    <div class="text-emerald-400 text-[11px] mt-1">● พร้อมใช้งาน (ว่าง 2 ช่อง)</div>
+                                </div>
+                                <div class="p-3 rounded-xl bg-slate-950 border border-sky-500/30">
+                                    <div class="text-white font-semibold">จุดชาร์จฝั่งขวา (เสา 2)</div>
+                                    <div class="text-slate-400 mt-1">พอร์ต: 2x USB-A / Type-C</div>
+                                    <div class="text-emerald-400 text-[11px] mt-1">● พร้อมใช้งาน (ว่าง 1 ช่อง)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Environmental & Lighting Telemetry -->
+                        <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 grid grid-cols-3 gap-2 text-center">
+                            <div class="p-2 rounded-xl bg-slate-950">
+                                <div class="text-[11px] text-slate-400">ค่าฝุ่น PM 2.5</div>
+                                <div class="text-base font-bold text-emerald-400 mt-0.5">18 µg/m³</div>
+                            </div>
+                            <div class="p-2 rounded-xl bg-slate-950">
+                                <div class="text-[11px] text-slate-400">อุณหภูมิ</div>
+                                <div class="text-base font-bold text-sky-400 mt-0.5">28.5 °C</div>
+                            </div>
+                            <div class="p-2 rounded-xl bg-slate-950">
+                                <div class="text-[11px] text-slate-400">ไฟ LED ป้าย</div>
+                                <div class="text-base font-bold text-cyan-300 mt-0.5">100% AUTO</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderRouteCards(routes) {
+            if (!routes.length) {
+                return `<div class="text-center py-6 text-xs text-slate-400">ไม่พบสายรถเมล์ที่ค้นหา</div>`;
+            }
+            return routes.map(r => `
+                <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="px-2.5 py-1 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-300 font-bold text-sm shrink-0">
+                            สาย ${r.line}
+                        </span>
+                        <div class="min-w-0">
+                            <div class="text-xs sm:text-sm font-medium text-white truncate">${r.name}</div>
+                            <div class="text-[11px] text-slate-400">${r.operator} • เวลาเดินรถ ${r.hours}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterRoutes(query) {
+            const q = query.trim().toLowerCase();
+            const filtered = directoryRoutes.filter(r =>
+                r.line.toLowerCase().includes(q) ||
+                r.name.toLowerCase().includes(q) ||
+                r.operator.toLowerCase().includes(q)
+            );
+            const box = document.getElementById('route-list-box');
+            if (box) box.innerHTML = renderRouteCards(filtered);
+        }
+
+        /**
+         * ============================================================================
+         * 11. REAL-TIME SIMULATION LOOP & MAIN ANIMATION RENDER LOOP
+         * ============================================================================
+         */
+        setInterval(() => {
+            // Update Clock
+            const now = new Date();
+            const clockEl = document.getElementById('kiosk-clock');
+            if (clockEl) {
+                clockEl.textContent = now.toTimeString().split(' ')[0];
+            }
+
+            // Countdown live bus ETA seconds and reset loop cleanly
+            liveBusData.forEach(bus => {
+                bus.etaSec -= 1;
+                if (bus.etaSec <= 0) {
+                    bus.etaSec = Math.floor(Math.random() * 480) + 180;
+                }
+            });
+
+            // Re-sort incoming buses by closest arrival
+            liveBusData.sort((a, b) => a.etaSec - b.etaSec);
+
+            // Refresh 3D CanvasTextures so the 3D screens update live!
+            updateEtaScreenTexture();
+            updateKioskScreenTexture();
+
+            // Refresh Kiosk Modal if currently viewing ETA tab
+            const modal = document.getElementById('kiosk-modal');
+            if (modal && !modal.classList.contains('hidden') && activeKioskTab === 'eta') {
+                renderKioskContent();
+            }
+        }, 1000);
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        const clock = new THREE.Clock();
+
+        function animateLoop() {
+            requestAnimationFrame(animateLoop);
+            const dt = Math.min(clock.getDelta(), 0.05);
+            const elapsed = clock.getElapsedTime();
+
+            // Update Live BUS TIME Smartphone Web Texture
+            updateSmartphoneWebTexture(elapsed);
+
+            // Update High-Density NPC Crowd & Hero Arrival Bus
+            updateCrowdAndBusSimulation(dt, elapsed);
+
+            // Smooth Camera Preset Transition (Lerp) or Focused NPC Camera
+            if (focusedNpc) {
+                updateFocusedNpcCamera();
+            } else if (isAnimatingCamera) {
+                camera.position.lerp(targetCamPos, 0.065);
+                controls.target.lerp(targetLookAt, 0.065);
+
+                if (camera.position.distanceTo(targetCamPos) < 0.04 && controls.target.distanceTo(targetLookAt) < 0.04) {
+                    isAnimatingCamera = false;
+                }
+            }
+
+            // Animate CCTV Blinking LEDs
+            cctvLeds.forEach((led, idx) => {
+                const blink = Math.sin(elapsed * 5 + idx) > 0;
+                led.material.color.setHex(blink ? 0xEF4444 : 0x450A0A);
+            });
+
+            // Pulse USB Charger LED Rings
+            usbRings.forEach(ring => {
+                const scale = 1 + Math.sin(elapsed * 3.5) * 0.08;
+                ring.scale.set(scale, scale, 1);
+            });
+
+            // Move Background EV Buses smoothly
+            movingBuses.forEach(b => {
+                b.mesh.position.x += b.speed;
+                if (b.speed > 0 && b.mesh.position.x > b.limit) b.mesh.position.x = -b.limit;
+                if (b.speed < 0 && b.mesh.position.x < -b.limit) b.mesh.position.x = b.limit;
+            });
+
+            controls.update();
+            updateCalloutPositions();
+            renderer.render(scene, camera);
+        }
+
+        // Start Application on Window Load
+        window.onload = function () {
+            initThreeScene();
+            animateLoop();
+        };
+    </script>
+</body>
+</html>

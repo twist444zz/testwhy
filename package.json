@@ -1,0 +1,44 @@
+{
+  "name": "bus-time",
+  "version": "1.0.0",
+  "description": "BUS TIME - เช็กเวลารถเมล์มาถึง เส้นทาง ป้ายจอด และติดตามรถเมล์แบบเรียลไทม์",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "test": "node test/ui.test.js && WITH_SYS=1 node test/ui.test.js && node --test test/system.test.js",
+    "build:desktop": "node scripts/build-desktop.js",
+    "build:offline": "node scripts/build-offline.js",
+    "start": "npm run build:desktop && electron .",
+    "kiosk": "npm run build:desktop && electron . --kiosk",
+    "dist": "npm run build:desktop && electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "@fontsource/noto-sans": "^5.3.0",
+    "@fontsource/noto-sans-thai": "^5.3.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "htm": "^3.1.1",
+    "jsdom": "^24.1.3",
+    "leaflet": "^1.9.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "build": {
+    "appId": "th.bustime.app",
+    "productName": "BUS TIME",
+    "files": [
+      "electron/**",
+      "desktop/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "registry",
+        "to": "registry"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
